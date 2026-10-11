@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "CCA",
+]
+resolver = "2"

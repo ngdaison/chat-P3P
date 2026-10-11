@@ -1,0 +1,14 @@
+target/
+**/target/
+**/*.rs.bk
+*.tmp
+*.dat
+*.part
+*.bin
+/p2p_data/
+/alice/
+/bob/
+/relay/
+/charlie/
+.idea/
+.vscode/

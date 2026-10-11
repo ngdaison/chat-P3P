@@ -1,0 +1,17 @@
+[package]
+name = "p2pchat"
+version = "0.1.0"
+edition = "2024"
+authors = ["P2P Chat Core Contributors"]
+description = "Pure Rust decentralized peer-to-peer encrypted chat core with zero third-party dependencies"
+license = "MIT"
+
+[lib]
+name = "p2pchat"
+path = "src/lib.rs"
+
+[[bin]]
+name = "p2pchat"
+path = "src/main.rs"
+
+[dependencies]
