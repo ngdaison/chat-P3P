@@ -69,7 +69,7 @@
                         <TextBlock x:Name="NodeStatusText" Text="Đang hoạt động (Cổng 7001)" FontSize="10" FontWeight="Medium"
                                    Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <Button x:Name="BtnQuickCopyId" Content="📋 Sao chép ID"
-                                Style="{StaticResource CaptionButton}" Width="Auto" Height="Auto" Padding="5,1" FontSize="9"
+                                Style="{StaticResource HeaderPillButton}"
                                 Click="BtnCopyMyId_Click" />
                     </StackPanel>
                 </Border>
@@ -78,7 +78,7 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
                             WindowChrome.IsHitTestVisibleInChrome="True">
                     <!-- Minimize Button -->
-                    <Button x:Name="BtnMinimize" Style="{StaticResource CaptionButton}" Click="BtnMinimize_Click" ToolTip="Thu nhỏ">
+                    <Button x:Name="BtnMinimize" Style="{StaticResource TitleBarCaptionButton}" Click="BtnMinimize_Click" ToolTip="Thu nhỏ">
                         <TextBlock x:Name="IconMinimize" Text="&#xE921;"
                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                    FontSize="10"
@@ -88,7 +88,7 @@
                     </Button>
 
                     <!-- Maximize / Restore Button -->
-                    <Button x:Name="BtnMaximize" Style="{StaticResource CaptionButton}" Click="BtnMaximize_Click" ToolTip="Phóng to">
+                    <Button x:Name="BtnMaximize" Style="{StaticResource TitleBarCaptionButton}" Click="BtnMaximize_Click" ToolTip="Phóng to">
                         <TextBlock x:Name="IconMaximize" Text="&#xE922;"
                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                    FontSize="10"
@@ -98,7 +98,7 @@
                     </Button>
 
                     <!-- Close Button -->
-                    <Button x:Name="BtnClose" Style="{StaticResource CaptionCloseButton}" Click="BtnClose_Click" ToolTip="Đóng">
+                    <Button x:Name="BtnClose" Style="{StaticResource TitleBarCloseButton}" Click="BtnClose_Click" ToolTip="Đóng">
                         <TextBlock x:Name="IconClose" Text="&#xE8BB;"
                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                    FontSize="10"
@@ -340,7 +340,7 @@
                                     </Grid.ColumnDefinitions>
 
                                     <!-- Paperclip attach button -->
-                                    <Button x:Name="BtnAttachClip" Grid.Column="0" Content="📎" Style="{StaticResource CaptionButton}"
+                                    <Button x:Name="BtnAttachClip" Grid.Column="0" Content="📎" Style="{StaticResource FluentCircleIconButton}"
                                             Width="34" Height="34" FontSize="14" Click="BtnSendFileQuick_Click" ToolTip="Đính kèm tệp gửi đi" />
 
                                     <!-- Text Input -->
