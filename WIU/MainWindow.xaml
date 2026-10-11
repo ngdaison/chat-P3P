@@ -13,7 +13,7 @@
 
     <!-- Modern Windows 11 Seamless Chrome -->
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="42"
+        <WindowChrome CaptionHeight="32"
                       ResizeBorderThickness="6"
                       GlassFrameThickness="0"
                       CornerRadius="0" />
@@ -27,10 +27,10 @@
         <local:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVis" />
     </Window.Resources>
 
-    <Grid>
+    <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
             <!-- Custom Integrated Title Bar -->
-            <RowDefinition Height="42" />
+            <RowDefinition Height="32" />
             <!-- Main Content Canvas -->
             <RowDefinition Height="*" />
             <!-- Bottom Status Bar -->
@@ -42,34 +42,34 @@
                 BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
             <Grid>
                 <!-- Left: App Branding -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0" HorizontalAlignment="Left">
                     <!-- Icon Box -->
-                    <Border Width="26" Height="26" CornerRadius="6" Margin="0,0,10,0">
+                    <Border Width="22" Height="22" CornerRadius="5" Margin="0,0,8,0">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                 <GradientStop Color="#0078D4" Offset="0" />
                                 <GradientStop Color="#00BCF9" Offset="1" />
                             </LinearGradientBrush>
                         </Border.Background>
-                        <TextBlock Text="🛡" FontSize="13" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <TextBlock Text="🛡" FontSize="11" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
-                    <TextBlock Text="P2P Chat" FontSize="13" FontWeight="SemiBold"
+                    <TextBlock Text="P2P Chat" FontSize="12" FontWeight="SemiBold"
                                Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
-                    <Border Background="#1A00BCF9" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock x:Name="TxtTitleTag" Text="PHI TẬP TRUNG · 100% RUST" FontSize="10" FontWeight="SemiBold" Foreground="#00BCF9" />
+                    <Border Background="#1A00BCF9" CornerRadius="4" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="TxtTitleTag" Text="PHI TẬP TRUNG · 100% RUST" FontSize="9" FontWeight="SemiBold" Foreground="#00BCF9" />
                     </Border>
                 </StackPanel>
 
                 <!-- Center: Live Status Pill -->
                 <Border HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Background="#1AFFFFFF" CornerRadius="12" Padding="12,4"
+                        Background="#1AFFFFFF" CornerRadius="11" Padding="10,2"
                         WindowChrome.IsHitTestVisibleInChrome="True">
                     <StackPanel Orientation="Horizontal">
-                        <Ellipse x:Name="NodeStatusDot" Width="7" Height="7" Fill="{StaticResource OnlineGreenBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock x:Name="NodeStatusText" Text="Đang hoạt động (Cổng 7001)" FontSize="11" FontWeight="Medium"
-                                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <Ellipse x:Name="NodeStatusDot" Width="6" Height="6" Fill="{StaticResource OnlineGreenBrush}" Margin="0,0,5,0" VerticalAlignment="Center" />
+                        <TextBlock x:Name="NodeStatusText" Text="Đang hoạt động (Cổng 7001)" FontSize="10" FontWeight="Medium"
+                                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <Button x:Name="BtnQuickCopyId" Content="📋 Sao chép ID"
-                                Style="{StaticResource CaptionButton}" Width="Auto" Height="Auto" Padding="6,2" FontSize="10"
+                                Style="{StaticResource CaptionButton}" Width="Auto" Height="Auto" Padding="5,1" FontSize="9"
                                 Click="BtnCopyMyId_Click" />
                     </StackPanel>
                 </Border>
@@ -77,45 +77,34 @@
                 <!-- Right: 100% Windows 11 Native Pixel-Perfect Caption Buttons -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
                             WindowChrome.IsHitTestVisibleInChrome="True">
-                    <!-- Minimize Button: Exact 10x1 line -->
+                    <!-- Minimize Button -->
                     <Button x:Name="BtnMinimize" Style="{StaticResource CaptionButton}" Click="BtnMinimize_Click" ToolTip="Thu nhỏ">
-                        <Path Data="M 0,0 L 10,0"
-                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                              StrokeThickness="1"
-                              SnapsToDevicePixels="True"
-                              RenderOptions.EdgeMode="Aliased"
-                              Width="10" Height="1" />
+                        <TextBlock x:Name="IconMinimize" Text="&#xE921;"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="10"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   TextOptions.TextRenderingMode="Grayscale"
+                                   TextOptions.TextFormattingMode="Display" />
                     </Button>
 
-                    <!-- Maximize / Restore Button: Exact 10x10 square or Restore dual squares -->
+                    <!-- Maximize / Restore Button -->
                     <Button x:Name="BtnMaximize" Style="{StaticResource CaptionButton}" Click="BtnMaximize_Click" ToolTip="Phóng to">
-                        <Grid Width="10" Height="10">
-                            <!-- Normal state: 10x10 square box -->
-                            <Rectangle x:Name="IconMaximize" Width="10" Height="10"
-                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                       StrokeThickness="1"
-                                       SnapsToDevicePixels="True"
-                                       RenderOptions.EdgeMode="Aliased"
-                                       Fill="Transparent" />
-                            <!-- Maximized state: Dual overlapping squares (Windows 11 Restore) -->
-                            <Path x:Name="IconRestore"
-                                  Data="M 2,0 L 10,0 L 10,8 L 8,8 M 8,2 L 8,10 L 0,10 L 0,2 Z"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1"
-                                  SnapsToDevicePixels="True"
-                                  RenderOptions.EdgeMode="Aliased"
-                                  Visibility="Collapsed" />
-                        </Grid>
+                        <TextBlock x:Name="IconMaximize" Text="&#xE922;"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="10"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   TextOptions.TextRenderingMode="Grayscale"
+                                   TextOptions.TextFormattingMode="Display" />
                     </Button>
 
-                    <!-- Close Button: Exact 10x10 45-degree cross, turns Windows 11 Red #C42B1C on hover -->
+                    <!-- Close Button -->
                     <Button x:Name="BtnClose" Style="{StaticResource CaptionCloseButton}" Click="BtnClose_Click" ToolTip="Đóng">
-                        <Path Data="M 0,0 L 10,10 M 0,10 L 10,0"
-                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                              StrokeThickness="1"
-                              SnapsToDevicePixels="True"
-                              RenderOptions.EdgeMode="Aliased"
-                              Width="10" Height="10" />
+                        <TextBlock x:Name="IconClose" Text="&#xE8BB;"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="10"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   TextOptions.TextRenderingMode="Grayscale"
+                                   TextOptions.TextFormattingMode="Display" />
                     </Button>
                 </StackPanel>
             </Grid>

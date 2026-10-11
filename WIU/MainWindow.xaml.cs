@@ -41,9 +41,14 @@ public partial class MainWindow : Window
     {
         bool isMaximized = WindowState == WindowState.Maximized;
         if (IconMaximize != null)
-            IconMaximize.Visibility = isMaximized ? Visibility.Collapsed : Visibility.Visible;
-        if (IconRestore != null)
-            IconRestore.Visibility = isMaximized ? Visibility.Visible : Visibility.Collapsed;
+        {
+            IconMaximize.Text = isMaximized ? "\uE923" : "\uE922";
+        }
+
+        if (RootGrid != null)
+        {
+            RootGrid.Margin = isMaximized ? new Thickness(7) : new Thickness(0);
+        }
 
         bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
         if (BtnMaximize != null)
