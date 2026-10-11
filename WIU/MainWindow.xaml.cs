@@ -19,6 +19,8 @@ public partial class MainWindow : Window
     private ContactDto? _selectedContact;
     private GroupDto? _selectedGroup;
     private List<MessageDto> _allMessages = new();
+    private List<ContactDto> _allContacts = new();
+    private int _boundPort = 7001;
 
     public MainWindow()
     {
@@ -30,24 +32,38 @@ public partial class MainWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        // Enable native Windows 11 Mica & Immersive Dark Mode
+        // Enable native Windows 11 Mica backdrop & Immersive Dark Mode
         WindowsNative.EnableMicaAndDarkMode(this);
     }
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        // 1. Start the P2P Chat Node
+        // 1. Start the P2P Chat Node with smart port fallback
         string dataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "p2p_data_win");
-        bool started = _node.Start(dataDir, "127.0.0.1:7001", true);
+        bool started = false;
 
-        if (!started)
+        for (int port = 7001; port <= 7020; port++)
         {
-            NodeStatusDot.Fill = System.Windows.Media.Brushes.Crimson;
-            NodeStatusText.Text = "Port 7001 busy, fallback 7005";
-            _node.Start(dataDir, "127.0.0.1:7005", true);
+            if (_node.Start(dataDir, $"127.0.0.1:{port}", true))
+            {
+                started = true;
+                _boundPort = port;
+                break;
+            }
         }
 
-        // 2. Wire Events
+        if (started)
+        {
+            NodeStatusDot.Fill = (System.Windows.Media.Brush)FindResource("OnlineGreenBrush");
+            NodeStatusText.Text = $"Active (Port {_boundPort})";
+        }
+        else
+        {
+            NodeStatusDot.Fill = System.Windows.Media.Brushes.Crimson;
+            NodeStatusText.Text = "Port binding error";
+        }
+
+        // 2. Wire Events from Rust Core
         _node.MessageReceived += OnMessageReceived;
         _node.PeerConnected += OnPeerConnected;
         _node.PeerDisconnected += OnPeerDisconnected;
@@ -66,8 +82,8 @@ public partial class MainWindow : Window
         RefreshMessages();
         RefreshNetworkStats();
 
-        // 4. Background refresh timer (every 2.5s for stats & transfers)
-        _pollTimer.Interval = TimeSpan.FromSeconds(2.5);
+        // 4. Background refresh timer (every 2s for stats & transfers)
+        _pollTimer.Interval = TimeSpan.FromSeconds(2.0);
         _pollTimer.Tick += (s, ev) =>
         {
             RefreshNetworkStats();
@@ -80,6 +96,23 @@ public partial class MainWindow : Window
     {
         _pollTimer.Stop();
         _node.Stop();
+    }
+
+    // --- Window Chrome Caption Buttons ---
+
+    private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void BtnMaximize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
+
+    private void BtnClose_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
     }
 
     // --- Event Handlers from Rust Core ---
@@ -108,7 +141,8 @@ public partial class MainWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
-            TxtStatusBar.Text = $"Peer disconnected: {peerId[..8]}";
+            string shortId = peerId.Length > 8 ? peerId[..8] : peerId;
+            TxtStatusBar.Text = $"Peer disconnected: {shortId}";
             RefreshNetworkStats();
         });
     }
@@ -118,7 +152,8 @@ public partial class MainWindow : Window
         Dispatcher.Invoke(() =>
         {
             WindowsNative.PlayNotificationSound();
-            TxtStatusBar.Text = $"Receiving file '{fileName}' ({fileSize / 1024} KB) from {sender[..8]}";
+            string shortSender = sender.Length > 8 ? sender[..8] : sender;
+            TxtStatusBar.Text = $"Receiving '{fileName}' ({fileSize / 1024} KB) from {shortSender}";
             RefreshFileTransfers();
         });
     }
@@ -140,7 +175,8 @@ public partial class MainWindow : Window
             WindowsNative.PlayNotificationSound();
             if (_selectedGroup != null && _selectedGroup.GroupId.Equals(groupId, StringComparison.OrdinalIgnoreCase))
             {
-                AppendGroupMessage(sender[..8], text, timestamp);
+                string shortSender = sender.Length > 8 ? sender[..8] : sender;
+                AppendGroupMessage(shortSender, text, timestamp);
             }
             TxtStatusBar.Text = $"Group message in '{groupName}'";
         });
@@ -154,7 +190,7 @@ public partial class MainWindow : Window
         });
     }
 
-    // --- Navigation ---
+    // --- Navigation Switching ---
 
     private void Nav_Checked(object sender, RoutedEventArgs e)
     {
@@ -168,19 +204,46 @@ public partial class MainWindow : Window
         ViewSettings.Visibility = NavSettings.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private void BtnNavToAddContact_Click(object sender, RoutedEventArgs e)
+    {
+        NavContacts.IsChecked = true;
+        TxtNewContactName.Focus();
+    }
+
     // --- Direct Messages ---
 
     private void RefreshContacts()
     {
-        var contacts = _node.GetContacts();
-        LstChatContacts.ItemsSource = contacts;
-        LstAllContacts.ItemsSource = contacts;
+        _allContacts = _node.GetContacts();
+        ApplyContactFilter();
 
-        CmbFileContact.ItemsSource = contacts;
+        LstAllContacts.ItemsSource = _allContacts;
+        CmbFileContact.ItemsSource = _allContacts;
         CmbFileContact.DisplayMemberPath = "Name";
-        if (contacts.Count > 0 && CmbFileContact.SelectedIndex < 0)
+        if (_allContacts.Count > 0 && CmbFileContact.SelectedIndex < 0)
         {
             CmbFileContact.SelectedIndex = 0;
+        }
+    }
+
+    private void TxtSearchContact_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        ApplyContactFilter();
+    }
+
+    private void ApplyContactFilter()
+    {
+        string filter = TxtSearchContact.Text.Trim();
+        if (string.IsNullOrEmpty(filter))
+        {
+            LstChatContacts.ItemsSource = _allContacts;
+        }
+        else
+        {
+            LstChatContacts.ItemsSource = _allContacts
+                .Where(c => c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                            c.Fingerprint.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                .ToList();
         }
     }
 
@@ -195,10 +258,15 @@ public partial class MainWindow : Window
         if (LstChatContacts.SelectedItem is ContactDto contact)
         {
             _selectedContact = contact;
+            ChatEmptyState.Visibility = Visibility.Collapsed;
+            ChatActivePane.Visibility = Visibility.Visible;
+
             TxtChatContactName.Text = contact.Name;
             TxtChatContactFingerprint.Text = $"Fingerprint: {contact.Fingerprint}";
-            BtnSendFileQuick.Visibility = Visibility.Visible;
+            TxtChatHeaderInitials.Text = contact.Name.Length > 0 ? contact.Name[..1].ToUpperInvariant() : "?";
+
             UpdateCurrentChatView();
+            TxtMessageInput.Focus();
         }
     }
 
@@ -206,6 +274,8 @@ public partial class MainWindow : Window
     {
         if (_selectedContact == null)
         {
+            ChatEmptyState.Visibility = Visibility.Visible;
+            ChatActivePane.Visibility = Visibility.Collapsed;
             ItemsMessages.ItemsSource = null;
             return;
         }
@@ -223,7 +293,7 @@ public partial class MainWindow : Window
         SendMessage();
     }
 
-    private void TxtMessageInput_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    private void TxtMessageInput_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
         {
@@ -233,11 +303,7 @@ public partial class MainWindow : Window
 
     private void SendMessage()
     {
-        if (_selectedContact == null)
-        {
-            MessageBox.Show("Please select a contact from the list first.", "P2P Chat", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
+        if (_selectedContact == null) return;
 
         string text = TxtMessageInput.Text.Trim();
         if (string.IsNullOrEmpty(text)) return;
@@ -247,10 +313,12 @@ public partial class MainWindow : Window
         {
             TxtMessageInput.Text = "";
             RefreshMessages();
+            TxtStatusBar.Text = $"Encrypted message sent to {_selectedContact.Name}";
         }
         else
         {
-            MessageBox.Show("Failed to send message. Please ensure contact is added and route exists.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            TxtStatusBar.Text = $"Could not deliver directly to {_selectedContact.Name}. Queued for relay distribution.";
+            RefreshMessages();
         }
     }
 
@@ -267,22 +335,23 @@ public partial class MainWindow : Window
         if (LstGroups.SelectedItem is GroupDto grp)
         {
             _selectedGroup = grp;
-            TxtActiveGroupName.Text = $"{grp.Name} (Epoch {grp.Epoch}) · {grp.MemberCount} member(s)";
+            TxtActiveGroupName.Text = $"{grp.Name} (Security Epoch {grp.Epoch}) · {grp.MemberCount} member(s)";
             BtnAddGroupMember.Visibility = Visibility.Visible;
             PanelGroupMessages.Children.Clear();
+            TxtGroupMessageInput.Focus();
         }
     }
 
     private void BtnCreateGroup_Click(object sender, RoutedEventArgs e)
     {
-        string? groupName = PromptDialog.Show(this, "Create Group", "Enter new encrypted group name:", "DevTeam");
+        string? groupName = PromptDialog.Show(this, "Create Group", "Enter encrypted group name:", "DevTeam");
         if (!string.IsNullOrWhiteSpace(groupName))
         {
             var res = _node.CreateGroup(groupName.Trim());
             if (res.Success)
             {
                 RefreshGroups();
-                TxtStatusBar.Text = $"Group '{groupName}' created.";
+                TxtStatusBar.Text = $"Encrypted group '{groupName}' created.";
             }
         }
     }
@@ -291,18 +360,18 @@ public partial class MainWindow : Window
     {
         if (_selectedGroup == null) return;
 
-        string? contactName = PromptDialog.Show(this, "Add Group Member", "Enter contact name to add to this group:", "");
+        string? contactName = PromptDialog.Show(this, "Add Member", "Enter contact nickname to add to group:", "");
         if (!string.IsNullOrWhiteSpace(contactName))
         {
             bool ok = _node.AddGroupMember(_selectedGroup.GroupId, contactName.Trim());
             if (ok)
             {
                 RefreshGroups();
-                TxtStatusBar.Text = $"Added '{contactName}' to group. Epoch rotated.";
+                TxtStatusBar.Text = $"Added '{contactName}' to group. Epoch symmetric key rotated.";
             }
             else
             {
-                MessageBox.Show("Failed to add member to group.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                TxtStatusBar.Text = $"Failed to add '{contactName}' to group. Ensure contact exists.";
             }
         }
     }
@@ -312,7 +381,7 @@ public partial class MainWindow : Window
         SendGroupMessage();
     }
 
-    private void TxtGroupMessageInput_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    private void TxtGroupMessageInput_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
         {
@@ -331,6 +400,7 @@ public partial class MainWindow : Window
         {
             AppendGroupMessage("Me", text, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
             TxtGroupMessageInput.Text = "";
+            TxtStatusBar.Text = $"Group message sent to {_selectedGroup.Name}";
         }
     }
 
@@ -338,29 +408,35 @@ public partial class MainWindow : Window
     {
         var border = new Border
         {
-            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2B, 0x2B, 0x2B)),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12, 8, 12, 8),
+            Background = sender == "Me" ? (System.Windows.Media.Brush)FindResource("OutgoingBubbleBrush")
+                                         : (System.Windows.Media.Brush)FindResource("CardBgBrush"),
+            BorderBrush = sender == "Me" ? null : (System.Windows.Media.Brush)FindResource("BorderBrush"),
+            BorderThickness = sender == "Me" ? new Thickness(0) : new Thickness(1),
+            CornerRadius = sender == "Me" ? new CornerRadius(14, 14, 2, 14) : new CornerRadius(14, 14, 14, 2),
+            Padding = new Thickness(14, 9, 14, 9),
             Margin = new Thickness(0, 4, 0, 4),
-            MaxWidth = 550,
-            HorizontalAlignment = sender == "Me" ? System.Windows.HorizontalAlignment.Right : System.Windows.HorizontalAlignment.Left
+            MaxWidth = 520,
+            HorizontalAlignment = sender == "Me" ? HorizontalAlignment.Right : HorizontalAlignment.Left
         };
 
         var sp = new StackPanel();
-        sp.Children.Add(new TextBlock
+        if (sender != "Me")
         {
-            Text = sender,
-            FontWeight = FontWeights.SemiBold,
-            FontSize = 11,
-            Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0xBC, 0xF9))
-        });
+            sp.Children.Add(new TextBlock
+            {
+                Text = sender,
+                FontWeight = FontWeights.SemiBold,
+                FontSize = 11,
+                Foreground = (System.Windows.Media.Brush)FindResource("CyanBrush"),
+                Margin = new Thickness(0, 0, 0, 3)
+            });
+        }
         sp.Children.Add(new TextBlock
         {
             Text = text,
             FontSize = 13,
             TextWrapping = TextWrapping.Wrap,
-            Foreground = System.Windows.Media.Brushes.White,
-            Margin = new Thickness(0, 2, 0, 0)
+            Foreground = System.Windows.Media.Brushes.White
         });
 
         border.Child = sp;
@@ -377,7 +453,7 @@ public partial class MainWindow : Window
 
         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(pubkey))
         {
-            MessageBox.Show("Please enter both Contact Name and Public Key Hex.", "Input Required", MessageBoxButton.OK, MessageBoxImage.Information);
+            TxtStatusBar.Text = "Please enter both Contact Nickname and 64-char Hex Public Key.";
             return;
         }
 
@@ -391,7 +467,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            MessageBox.Show("Invalid Public Key Hex format (must be 64 hex characters / 32 bytes).", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            TxtStatusBar.Text = "Invalid Public Key hex format (must be 64 valid hex characters).";
         }
     }
 
@@ -433,27 +509,27 @@ public partial class MainWindow : Window
     {
         if (CmbFileContact.SelectedItem is not ContactDto contact)
         {
-            MessageBox.Show("Please select a recipient contact.", "P2P Chat", MessageBoxButton.OK, MessageBoxImage.Information);
+            TxtStatusBar.Text = "Please select a recipient contact.";
             return;
         }
 
         string path = TxtFilePath.Text.Trim();
         if (!File.Exists(path))
         {
-            MessageBox.Show("Selected file does not exist.", "File Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            TxtStatusBar.Text = "Selected file does not exist on disk.";
             return;
         }
 
         bool ok = _node.SendFile(contact.Name, path);
         if (ok)
         {
-            TxtStatusBar.Text = $"Transfer initiated for '{Path.GetFileName(path)}'.";
+            TxtStatusBar.Text = $"Encrypted transfer initiated for '{Path.GetFileName(path)}'.";
             TxtFilePath.Text = "";
             RefreshFileTransfers();
         }
         else
         {
-            MessageBox.Show("Failed to start file transfer. Verify connection with contact.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            TxtStatusBar.Text = "Failed to start file transfer. Verify connection status.";
         }
     }
 
@@ -480,12 +556,12 @@ public partial class MainWindow : Window
         bool ok = _node.ConnectPeer(addr);
         if (ok)
         {
-            TxtStatusBar.Text = $"Connection initiated to {addr}.";
+            TxtStatusBar.Text = $"TCP Handshake initiated to {addr}.";
             RefreshNetworkStats();
         }
         else
         {
-            MessageBox.Show($"Failed to connect to {addr}. Ensure remote peer is active.", "Connection Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+            TxtStatusBar.Text = $"Failed to connect to {addr}. Check remote node status.";
         }
     }
 
@@ -503,7 +579,16 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(_node.PeerId))
         {
             Clipboard.SetText(_node.PeerId);
-            MessageBox.Show($"Peer ID copied to clipboard:\n\n{_node.PeerId}", "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
+            TxtStatusBar.Text = "Peer ID copied to clipboard!";
+        }
+    }
+
+    private void BtnCopyPubKey_Click(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(_node.PublicKey))
+        {
+            Clipboard.SetText(_node.PublicKey);
+            TxtStatusBar.Text = "Public Key copied to clipboard!";
         }
     }
 }

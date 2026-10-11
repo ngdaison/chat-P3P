@@ -269,8 +269,8 @@ public class P2pNodeService : IDisposable
 
             if (status > 0)
             {
-                string json = Encoding.UTF8.GetString(buf).TrimEnd('\0');
-                Array.Clear(buf, 0, buf.Length);
+                string json = Encoding.UTF8.GetString(buf, 0, status);
+                Array.Clear(buf, 0, status + 1);
                 ProcessEvent(json);
             }
             else

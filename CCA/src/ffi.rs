@@ -354,7 +354,7 @@ pub unsafe extern "C" fn p2p_node_get_messages_json(
             escape_json(&m.content),
             m.timestamp,
             m.is_outgoing,
-            m.status
+            escape_json(&m.status.to_string())
         ));
     }
     let json = format!("[{}]", items.join(","));
@@ -585,8 +585,7 @@ pub unsafe extern "C" fn p2p_node_poll_event(
     let h = &*handle;
     let mut q = h.events.lock().unwrap();
     if let Some(ev) = q.pop_front() {
-        copy_to_c_buffer(&ev, out_buf, max_len);
-        1
+        copy_to_c_buffer(&ev, out_buf, max_len)
     } else {
         0
     }

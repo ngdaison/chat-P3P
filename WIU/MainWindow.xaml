@@ -5,91 +5,138 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:P2PChatApp"
         mc:Ignorable="d"
-        Title="P2P Chat - Sovereign Windows Client"
-        Height="720" Width="1050"
-        MinHeight="600" MinWidth="850"
+        Title="P2P Chat — Sovereign Client"
+        Height="740" Width="1080"
+        MinHeight="620" MinWidth="880"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource WindowBackgroundBrush}">
+        Background="{StaticResource WindowBgBrush}">
+
+    <!-- Modern Windows 11 Seamless Chrome -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="42"
+                      ResizeBorderThickness="6"
+                      GlassFrameThickness="0"
+                      CornerRadius="0" />
+    </WindowChrome.WindowChrome>
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+        <local:InitialsConverter x:Key="Initials" />
+        <local:AvatarBrushConverter x:Key="AvatarBrush" />
+        <local:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVis" />
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <!-- Custom App Header -->
-            <RowDefinition Height="46" />
-            <!-- Main Content Area -->
+            <!-- Custom Integrated Title Bar -->
+            <RowDefinition Height="42" />
+            <!-- Main Content Canvas -->
             <RowDefinition Height="*" />
-            <!-- Status Bar -->
+            <!-- Bottom Status Bar -->
             <RowDefinition Height="28" />
         </Grid.RowDefinitions>
 
-        <!-- TOP BAR -->
-        <Border Grid.Row="0" Background="{StaticResource SidebarBackgroundBrush}"
-                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
-            <Grid Margin="16,0">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="🛡️" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <TextBlock Text="P2P Chat" FontSize="15" FontWeight="SemiBold"
+        <!-- 1. CUSTOM INTEGRATED TITLE BAR (WindowChrome) -->
+        <Border Grid.Row="0" Background="{StaticResource HeaderBgBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+            <Grid>
+                <!-- Left: App Branding -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0" HorizontalAlignment="Left">
+                    <!-- Icon Box -->
+                    <Border Width="26" Height="26" CornerRadius="6" Margin="0,0,10,0">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#0078D4" Offset="0" />
+                                <GradientStop Color="#00BCF9" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <TextBlock Text="🛡" FontSize="13" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="P2P Chat" FontSize="13" FontWeight="SemiBold"
                                Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
-                    <Border Background="#1AFFFFFF" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="Pure Rust Core · Zero Server · E2EE" FontSize="11" Foreground="#00BCF9" />
+                    <Border Background="#1A00BCF9" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="SOVEREIGN · PURE RUST" FontSize="10" FontWeight="SemiBold" Foreground="#00BCF9" />
                     </Border>
                 </StackPanel>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Ellipse x:Name="NodeStatusDot" Width="9" Height="9" Fill="#107C41" Margin="0,0,6,0" VerticalAlignment="Center" />
-                    <TextBlock x:Name="NodeStatusText" Text="Online (Port 7001)" FontSize="12"
-                               Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,14,0" />
+                <!-- Center: Live Status Pill -->
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="#1AFFFFFF" CornerRadius="12" Padding="12,4"
+                        WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse x:Name="NodeStatusDot" Width="7" Height="7" Fill="{StaticResource OnlineGreenBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock x:Name="NodeStatusText" Text="Active (Port 7001)" FontSize="11" FontWeight="Medium"
+                                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <Button x:Name="BtnQuickCopyId" Content="📋 Copy ID"
+                                Style="{StaticResource CaptionButton}" Width="Auto" Height="Auto" Padding="6,2" FontSize="10"
+                                Click="BtnCopyMyId_Click" />
+                    </StackPanel>
+                </Border>
 
-                    <Button x:Name="BtnCopyMyId" Content="📋 Copy My Peer ID"
-                            Style="{StaticResource FluentSecondaryButton}" Padding="8,4" FontSize="11"
-                            Click="BtnCopyMyId_Click" />
+                <!-- Right: Native Caption Buttons (Min, Max, Close) -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Content="—" Style="{StaticResource CaptionButton}" Click="BtnMinimize_Click" ToolTip="Minimize" />
+                    <Button Content="□" Style="{StaticResource CaptionButton}" Click="BtnMaximize_Click" ToolTip="Maximize" />
+                    <Button Content="✕" Style="{StaticResource CaptionCloseButton}" Click="BtnClose_Click" ToolTip="Close" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- MAIN BODY (SIDEBAR + VIEWS) -->
+        <!-- 2. MAIN WORKSPACE (SIDEBAR + CONTENT PANELS) -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <!-- Navigation Sidebar -->
                 <ColumnDefinition Width="220" />
-                <!-- Content Area -->
+                <!-- Content View -->
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- SIDEBAR -->
-            <Border Grid.Column="0" Background="{StaticResource SidebarBackgroundBrush}"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+            <!-- LEFT SIDEBAR -->
+            <Border Grid.Column="0" Background="{StaticResource SidebarBgBrush}"
+                    BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <!-- My Identity Footer -->
-                    <Border DockPanel.Dock="Bottom" Background="#14FFFFFF" Margin="10" Padding="10" CornerRadius="8">
-                        <StackPanel>
-                            <TextBlock Text="MY IDENTITY" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
-                            <TextBlock x:Name="TxtShortPeerId" Text="Loading..." FontSize="12" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
-                            <TextBlock x:Name="TxtPeerCount" Text="0 peer(s) connected" FontSize="11"
-                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" />
-                        </StackPanel>
+                    <!-- User Profile Footer -->
+                    <Border DockPanel.Dock="Bottom" Background="{StaticResource CardBgBrush}" Margin="10" Padding="10" CornerRadius="8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <!-- Avatar -->
+                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16"
+                                    Background="{StaticResource AccentBrush}" Margin="0,0,8,0">
+                                <TextBlock Text="ME" FontSize="11" FontWeight="Bold" Foreground="White"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="TxtShortPeerId" Text="Loading..." FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="TxtPeerCount" Text="0 peers connected" FontSize="10"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,1,0,0" />
+                            </StackPanel>
+                        </Grid>
                     </Border>
 
-                    <!-- Navigation Items -->
+                    <!-- Nav Items -->
                     <StackPanel Margin="0,10,0,0">
+                        <TextBlock Text="CHANNELS" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" Margin="16,4,0,8" />
                         <RadioButton x:Name="NavDirectChat" Content="💬  Direct Messages"
                                      Style="{StaticResource FluentNavButton}" IsChecked="True"
                                      Checked="Nav_Checked" />
                         <RadioButton x:Name="NavGroupChat" Content="👥  Encrypted Groups"
                                      Style="{StaticResource FluentNavButton}"
                                      Checked="Nav_Checked" />
-                        <RadioButton x:Name="NavContacts" Content="📖  Contacts"
+
+                        <TextBlock Text="NETWORKING" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" Margin="16,14,0,8" />
+                        <RadioButton x:Name="NavContacts" Content="📖  Contacts Book"
                                      Style="{StaticResource FluentNavButton}"
                                      Checked="Nav_Checked" />
                         <RadioButton x:Name="NavFiles" Content="📁  File Transfers"
                                      Style="{StaticResource FluentNavButton}"
                                      Checked="Nav_Checked" />
-                        <RadioButton x:Name="NavNetwork" Content="🌐  Network &amp; Relay"
+                        <RadioButton x:Name="NavNetwork" Content="🌐  P2P Network"
                                      Style="{StaticResource FluentNavButton}"
                                      Checked="Nav_Checked" />
                         <RadioButton x:Name="NavSettings" Content="⚙️  Settings"
@@ -102,25 +149,54 @@
             <!-- VIEW 1: DIRECT MESSAGES -->
             <Grid x:Name="ViewDirectChat" Grid.Column="1" Visibility="Visible">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="230" />
+                    <!-- Conversations List Column -->
+                    <ColumnDefinition Width="260" />
+                    <!-- Chat Canvas Column -->
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Contacts list for chat -->
-                <Border Grid.Column="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0" Background="#181818">
+                <!-- Conversations List -->
+                <Border Grid.Column="0" Background="#161616" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,1,0">
                     <DockPanel>
-                        <Border DockPanel.Dock="Top" Padding="12,10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
-                            <TextBlock Text="CONVERSATIONS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
+                        <!-- Top search bar & add button -->
+                        <Border DockPanel.Dock="Top" Padding="12,10" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="TxtSearchContact" Grid.Column="0" Style="{StaticResource FluentTextBox}"
+                                         Padding="8,6" FontSize="12"
+                                         TextChanged="TxtSearchContact_TextChanged" />
+                                <Button Grid.Column="1" Content="+ Add" Style="{StaticResource FluentSecondaryButton}"
+                                        Padding="8,5" FontSize="11" Margin="6,0,0,0" Click="BtnNavToAddContact_Click" />
+                            </Grid>
                         </Border>
+
+                        <!-- Contact List Items -->
                         <ListBox x:Name="LstChatContacts" Background="Transparent" BorderThickness="0"
                                  SelectionChanged="LstChatContacts_SelectionChanged">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Padding="10,8" Margin="4,2" CornerRadius="6" Background="{StaticResource CardBackgroundBrush}">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" FontSize="13" />
-                                            <TextBlock Text="{Binding Fingerprint}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,2,0,0" />
-                                        </StackPanel>
+                                    <Border Padding="10,8" CornerRadius="8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="38" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <!-- Initials Avatar -->
+                                            <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18"
+                                                    Background="{Binding Name, Converter={StaticResource AvatarBrush}}">
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource Initials}}"
+                                                           FontSize="12" FontWeight="Bold" Foreground="White"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="White" FontSize="13" />
+                                                <TextBlock Text="{Binding Fingerprint}" Foreground="{StaticResource TextSecondaryBrush}"
+                                                           FontSize="10" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
@@ -128,116 +204,162 @@
                     </DockPanel>
                 </Border>
 
-                <!-- Chat conversation view -->
+                <!-- Chat Canvas -->
                 <Grid Grid.Column="1">
-                    <Grid.RowDefinitions>
+                    <!-- EMPTY STATE (When no contact is selected) -->
+                    <Border x:Name="ChatEmptyState" Background="{StaticResource WindowBgBrush}" Visibility="Visible">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="380">
+                            <Border Width="64" Height="64" CornerRadius="32" Background="#150078D4" HorizontalAlignment="Center" Margin="0,0,0,16">
+                                <TextBlock Text="🛡" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#00BCF9" />
+                            </Border>
+                            <TextBlock Text="Sovereign P2P Chat" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="End-to-End Encrypted · Zero Servers · No Middleman" FontSize="12"
+                                       Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,6,0,16" />
+                            <TextBlock Text="Select a contact from the left pane or click '+ Add' to exchange public keys and begin chatting."
+                                       FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" TextAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ACTIVE CHAT VIEW -->
+                    <Grid x:Name="ChatActivePane" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <!-- Chat Header -->
+                            <RowDefinition Height="56" />
+                            <!-- Messages Area -->
+                            <RowDefinition Height="*" />
+                            <!-- Input Bar -->
+                            <RowDefinition Height="68" />
+                        </Grid.RowDefinitions>
+
                         <!-- Header -->
-                        <RowDefinition Height="50" />
-                        <!-- Message List -->
-                        <RowDefinition Height="*" />
-                        <!-- Input Bar -->
-                        <RowDefinition Height="64" />
-                    </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Background="{StaticResource HeaderBgBrush}"
+                                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1" Padding="16,0">
+                            <Grid VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border x:Name="ChatHeaderAvatar" Width="36" Height="36" CornerRadius="18"
+                                            Background="{StaticResource AccentBrush}" Margin="0,0,12,0">
+                                        <TextBlock x:Name="TxtChatHeaderInitials" Text="?" FontSize="13" FontWeight="Bold"
+                                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock x:Name="TxtChatContactName" Text="Contact Name"
+                                                   FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                            <Border Background="#15107C41" CornerRadius="3" Padding="4,1" Margin="0,0,6,0">
+                                                <TextBlock Text="✓ E2EE VERIFIED" FontSize="9" FontWeight="Bold" Foreground="#107C41" />
+                                            </Border>
+                                            <TextBlock x:Name="TxtChatContactFingerprint" Text="Fingerprint: ..." FontSize="10"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
 
-                    <!-- Chat Header -->
-                    <Border Grid.Row="0" Background="{StaticResource CardBackgroundBrush}"
-                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,0">
-                        <Grid VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="TxtChatContactName" Text="Select a contact to begin"
-                                           FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
-                                <TextBlock x:Name="TxtChatContactFingerprint" Text="" FontSize="11"
-                                           Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="12,0,0,0" />
-                            </StackPanel>
-                            <Button x:Name="BtnSendFileQuick" Content="📎 Send File"
-                                    Style="{StaticResource FluentSecondaryButton}" HorizontalAlignment="Right"
-                                    Click="BtnSendFileQuick_Click" Visibility="Collapsed" />
-                        </Grid>
-                    </Border>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Button x:Name="BtnSendFileQuick" Content="📎 Send File"
+                                            Style="{StaticResource FluentSecondaryButton}" Click="BtnSendFileQuick_Click" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
 
-                    <!-- Message History -->
-                    <ScrollViewer x:Name="ScrollMessages" Grid.Row="1" Padding="16,10">
-                        <ItemsControl x:Name="ItemsMessages">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,4">
-                                        <!-- Outgoing bubble -->
-                                        <Border HorizontalAlignment="Right" MaxWidth="520"
-                                                Background="{StaticResource AccentBrush}" CornerRadius="10,10,2,10"
-                                                Padding="12,8" Margin="40,0,0,0"
-                                                Visibility="{Binding IsOutgoing, Converter={StaticResource BoolToVis}}">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="White" FontSize="13" />
-                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,3,0,0">
-                                                    <TextBlock Text="{Binding FormattedTime}" FontSize="10" Foreground="#D0E6FF" Margin="0,0,6,0" />
-                                                    <TextBlock Text="{Binding Status}" FontSize="10" Foreground="#D0E6FF" />
+                        <!-- Messages Scroll Area -->
+                        <ScrollViewer x:Name="ScrollMessages" Grid.Row="1" Padding="20,12">
+                            <ItemsControl x:Name="ItemsMessages">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,4">
+                                            <!-- Outgoing Message Bubble (Right) -->
+                                            <Border HorizontalAlignment="Right" MaxWidth="520"
+                                                    Background="{StaticResource OutgoingBubbleBrush}"
+                                                    CornerRadius="14,14,2,14" Padding="14,9" Margin="60,0,0,0"
+                                                    Visibility="{Binding IsOutgoing, Converter={StaticResource BoolToVis}}">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="White" FontSize="13" />
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
+                                                        <TextBlock Text="{Binding FormattedTime}" FontSize="10" Foreground="#D5E8FF" Margin="0,0,6,0" />
+                                                        <TextBlock Text="{Binding Status}" FontSize="10" Foreground="#D5E8FF" />
+                                                    </StackPanel>
                                                 </StackPanel>
-                                            </StackPanel>
-                                        </Border>
+                                            </Border>
 
-                                        <!-- Incoming bubble -->
-                                        <Border HorizontalAlignment="Left" MaxWidth="520"
-                                                Background="{StaticResource CardBackgroundBrush}" CornerRadius="10,10,10,2"
-                                                Padding="12,8" Margin="0,0,40,0"
-                                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                                Visibility="{Binding IsOutgoing, Converter={StaticResource InverseBoolToVis}}">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Sender}" FontSize="11" FontWeight="SemiBold" Foreground="#00BCF9" Margin="0,0,0,2" />
-                                                <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="{StaticResource TextPrimaryBrush}" FontSize="13" />
-                                                <TextBlock Text="{Binding FormattedTime}" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"
-                                                           HorizontalAlignment="Right" Margin="0,3,0,0" />
-                                            </StackPanel>
-                                        </Border>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                                            <!-- Incoming Message Bubble (Left) -->
+                                            <Border HorizontalAlignment="Left" MaxWidth="520"
+                                                    Background="{StaticResource CardBgBrush}"
+                                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                                    CornerRadius="14,14,14,2" Padding="14,9" Margin="0,0,60,0"
+                                                    Visibility="{Binding IsOutgoing, Converter={StaticResource InverseBoolToVis}}">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Sender}" FontSize="11" FontWeight="SemiBold" Foreground="#00BCF9" Margin="0,0,0,3" />
+                                                    <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="{StaticResource TextPrimaryBrush}" FontSize="13" />
+                                                    <TextBlock Text="{Binding FormattedTime}" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"
+                                                               HorizontalAlignment="Right" Margin="0,4,0,0" />
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
 
-                    <!-- Message Input Bar -->
-                    <Border Grid.Row="2" Background="{StaticResource SidebarBackgroundBrush}"
-                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,10">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBox x:Name="TxtMessageInput" Grid.Column="0"
-                                     Style="{StaticResource FluentTextBox}"
-                                     KeyDown="TxtMessageInput_KeyDown"
-                                     Margin="0,0,10,0" VerticalAlignment="Center" />
-                            <Button x:Name="BtnSendMessage" Grid.Column="1" Content="Send  ➤"
-                                    Style="{StaticResource FluentPrimaryButton}"
-                                    Click="BtnSendMessage_Click" VerticalAlignment="Center" />
-                        </Grid>
-                    </Border>
+                        <!-- Modern Rounded Input Bar -->
+                        <Border Grid.Row="2" Background="{StaticResource HeaderBgBrush}"
+                                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="16,10">
+                            <Border Background="{StaticResource InputBgBrush}" CornerRadius="22"
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Padding="6,4">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Paperclip attach button -->
+                                    <Button Grid.Column="0" Content="📎" Style="{StaticResource CaptionButton}"
+                                            Width="34" Height="34" FontSize="14" Click="BtnSendFileQuick_Click" ToolTip="Attach File" />
+
+                                    <!-- Text Input -->
+                                    <TextBox x:Name="TxtMessageInput" Grid.Column="1"
+                                             Background="Transparent" BorderThickness="0"
+                                             Foreground="White" FontSize="13" CaretBrush="White"
+                                             VerticalAlignment="Center" Padding="8,6"
+                                             KeyDown="TxtMessageInput_KeyDown" />
+
+                                    <!-- Send Circular Button -->
+                                    <Button x:Name="BtnSendMessage" Grid.Column="2" Content="➤"
+                                            Style="{StaticResource FluentPrimaryButton}"
+                                            Width="34" Height="34" Padding="0" Margin="0,0,2,0"
+                                            FontSize="12" Click="BtnSendMessage_Click" ToolTip="Send Message (Enter)" />
+                                </Grid>
+                            </Border>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Grid>
 
             <!-- VIEW 2: GROUP CHAT -->
             <Grid x:Name="ViewGroupChat" Grid.Column="1" Visibility="Collapsed">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="230" />
+                    <ColumnDefinition Width="260" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0" Background="#181818">
+                <Border Grid.Column="0" Background="#161616" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,1,0">
                     <DockPanel>
-                        <Border DockPanel.Dock="Top" Padding="12,10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+                        <Border DockPanel.Dock="Top" Padding="12,10" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
                             <Grid>
                                 <TextBlock Text="ENCRYPTED GROUPS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
                                 <Button Content="+ Create" Style="{StaticResource FluentSecondaryButton}"
-                                        Padding="6,3" FontSize="11" HorizontalAlignment="Right" Click="BtnCreateGroup_Click" />
+                                        Padding="8,4" FontSize="11" HorizontalAlignment="Right" Click="BtnCreateGroup_Click" />
                             </Grid>
                         </Border>
                         <ListBox x:Name="LstGroups" Background="Transparent" BorderThickness="0"
                                  SelectionChanged="LstGroups_SelectionChanged">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Padding="10,8" Margin="4,2" CornerRadius="6" Background="{StaticResource CardBackgroundBrush}">
+                                    <Border Padding="10,8" CornerRadius="8">
                                         <StackPanel>
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" FontSize="13" />
-                                            <TextBlock Text="{Binding Epoch, StringFormat='Epoch {0}'}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,2,0,0" />
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="White" FontSize="13" />
+                                            <TextBlock Text="{Binding Epoch, StringFormat='Security Epoch {0}'}" Foreground="#00BCF9" FontSize="10" Margin="0,2,0,0" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -248,15 +370,15 @@
 
                 <Grid Grid.Column="1">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="50" />
+                        <RowDefinition Height="56" />
                         <RowDefinition Height="*" />
-                        <RowDefinition Height="64" />
+                        <RowDefinition Height="68" />
                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0" Background="{StaticResource CardBackgroundBrush}"
-                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,0">
+                    <Border Grid.Row="0" Background="{StaticResource HeaderBgBrush}"
+                            BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1" Padding="16,0">
                         <Grid VerticalAlignment="Center">
-                            <TextBlock x:Name="TxtActiveGroupName" Text="Select or create a group"
+                            <TextBlock x:Name="TxtActiveGroupName" Text="Select or create an encrypted group"
                                        FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
                             <Button x:Name="BtnAddGroupMember" Content="+ Add Member"
                                     Style="{StaticResource FluentSecondaryButton}" HorizontalAlignment="Right"
@@ -264,37 +386,76 @@
                         </Grid>
                     </Border>
 
-                    <ScrollViewer x:Name="ScrollGroupMessages" Grid.Row="1" Padding="16,10">
+                    <ScrollViewer x:Name="ScrollGroupMessages" Grid.Row="1" Padding="20,12">
                         <StackPanel x:Name="PanelGroupMessages" />
                     </ScrollViewer>
 
-                    <Border Grid.Row="2" Background="{StaticResource SidebarBackgroundBrush}"
-                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,10">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBox x:Name="TxtGroupMessageInput" Grid.Column="0"
-                                     Style="{StaticResource FluentTextBox}"
-                                     KeyDown="TxtGroupMessageInput_KeyDown"
-                                     Margin="0,0,10,0" VerticalAlignment="Center" />
-                            <Button x:Name="BtnSendGroupMessage" Grid.Column="1" Content="Send to Group"
-                                    Style="{StaticResource FluentPrimaryButton}"
-                                    Click="BtnSendGroupMessage_Click" VerticalAlignment="Center" />
-                        </Grid>
+                    <Border Grid.Row="2" Background="{StaticResource HeaderBgBrush}"
+                            BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="16,10">
+                        <Border Background="{StaticResource InputBgBrush}" CornerRadius="22"
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Padding="6,4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="TxtGroupMessageInput" Grid.Column="0"
+                                         Background="Transparent" BorderThickness="0"
+                                         Foreground="White" FontSize="13" CaretBrush="White"
+                                         VerticalAlignment="Center" Padding="12,6"
+                                         KeyDown="TxtGroupMessageInput_KeyDown" />
+                                <Button x:Name="BtnSendGroupMessage" Grid.Column="1" Content="➤"
+                                        Style="{StaticResource FluentPrimaryButton}"
+                                        Width="34" Height="34" Padding="0" Margin="0,0,2,0"
+                                        FontSize="12" Click="BtnSendGroupMessage_Click" />
+                            </Grid>
+                        </Border>
                     </Border>
                 </Grid>
             </Grid>
 
-            <!-- VIEW 3: CONTACTS -->
-            <Grid x:Name="ViewContacts" Grid.Column="1" Visibility="Collapsed" Margin="24">
-                <DockPanel>
-                    <!-- Add Contact Card -->
-                    <Border DockPanel.Dock="Top" Background="{StaticResource CardBackgroundBrush}"
-                            CornerRadius="8" Padding="16" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+            <!-- VIEW 3: CONTACTS BOOK -->
+            <ScrollViewer x:Name="ViewContacts" Grid.Column="1" Visibility="Collapsed" Padding="24">
+                <StackPanel MaxWidth="800" HorizontalAlignment="Left">
+                    <!-- My Identity Hero Card -->
+                    <Border Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="18"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
                         <StackPanel>
-                            <TextBlock Text="Add New Contact" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,10" />
+                            <TextBlock Text="MY SOVEREIGN IDENTITY" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource CyanBrush}" />
+                            <TextBlock Text="Share your Public Key with friends so they can add you directly to their encrypted address book."
+                                       FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,12" />
+
+                            <TextBlock Text="Public Key (X25519 - 64 Hex Characters):" FontSize="11" FontWeight="Medium" Foreground="#CCCCCC" />
+                            <Grid Margin="0,4,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="TxtFullPubKey" Grid.Column="0" Style="{StaticResource FluentTextBox}" IsReadOnly="True" />
+                                <Button Grid.Column="1" Content="Copy Key" Style="{StaticResource FluentSecondaryButton}"
+                                        Margin="8,0,0,0" Click="BtnCopyPubKey_Click" />
+                            </Grid>
+
+                            <TextBlock Text="Peer ID (SHA-256):" FontSize="11" FontWeight="Medium" Foreground="#CCCCCC" />
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="TxtFullPeerId" Grid.Column="0" Style="{StaticResource FluentTextBox}" IsReadOnly="True" />
+                                <Button Grid.Column="1" Content="Copy ID" Style="{StaticResource FluentSecondaryButton}"
+                                        Margin="8,0,0,0" Click="BtnCopyMyId_Click" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Add New Contact Card -->
+                    <Border Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="18"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="Add New Contact" FontSize="14" FontWeight="SemiBold" Foreground="White" />
+                            <TextBlock Text="Enter friend's nickname and paste their 64-character public key hex."
+                                       FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,12" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="180" />
@@ -311,25 +472,36 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Contact List -->
+                    <!-- Contacts List -->
+                    <TextBlock Text="SAVED CONTACTS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" Margin="0,8,0,8" />
                     <ListBox x:Name="LstAllContacts" Background="Transparent" BorderThickness="0">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource CardBackgroundBrush}" CornerRadius="8"
+                                <Border Background="{StaticResource CardBgBrush}" CornerRadius="8"
                                         Padding="16,12" Margin="0,4" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="42" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
-                                            <TextBlock Text="{Binding Fingerprint, StringFormat='Security Fingerprint: {0}'}" FontSize="12"
-                                                       Foreground="#00BCF9" Margin="0,4,0,0" />
-                                            <TextBlock Text="{Binding PublicKey, StringFormat='Public Key: {0}'}" FontSize="11"
-                                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" />
+
+                                        <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19"
+                                                Background="{Binding Name, Converter={StaticResource AvatarBrush}}">
+                                            <TextBlock Text="{Binding Name, Converter={StaticResource Initials}}"
+                                                       FontSize="13" FontWeight="Bold" Foreground="White"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="White" />
+                                            <TextBlock Text="{Binding Fingerprint, StringFormat='Security Fingerprint: {0}'}" FontSize="11"
+                                                       Foreground="#00BCF9" Margin="0,3,0,0" />
+                                            <TextBlock Text="{Binding PublicKey, StringFormat='Public Key: {0}'}" FontSize="10"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,1,0,0" TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
-                                        <Button Grid.Column="1" Content="Chat"
+
+                                        <Button Grid.Column="2" Content="💬 Chat"
                                                 Style="{StaticResource FluentSecondaryButton}"
                                                 Tag="{Binding}" Click="BtnChatWithContact_Click" VerticalAlignment="Center" />
                                     </Grid>
@@ -337,24 +509,27 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                </DockPanel>
-            </Grid>
+                </StackPanel>
+            </ScrollViewer>
 
             <!-- VIEW 4: FILE TRANSFERS -->
-            <Grid x:Name="ViewFiles" Grid.Column="1" Visibility="Collapsed" Margin="24">
-                <DockPanel>
-                    <Border DockPanel.Dock="Top" Background="{StaticResource CardBackgroundBrush}"
-                            CornerRadius="8" Padding="16" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+            <ScrollViewer x:Name="ViewFiles" Grid.Column="1" Visibility="Collapsed" Padding="24">
+                <StackPanel MaxWidth="800" HorizontalAlignment="Left">
+                    <!-- Send File Card -->
+                    <Border Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="18"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
                         <StackPanel>
-                            <TextBlock Text="Send Encrypted File (Chunked 256 KiB)" FontSize="14" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,10" />
+                            <TextBlock Text="Send Encrypted File (Chunked 256 KiB)" FontSize="14" FontWeight="SemiBold" Foreground="White" />
+                            <TextBlock Text="Files are sliced into encrypted 256 KiB chunks, with individual SHA-256 hashes and Ed25519 signatures."
+                                       FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,12" />
+
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="180" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <ComboBox x:Name="CmbFileContact" Grid.Column="0" Height="34" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                <ComboBox x:Name="CmbFileContact" Grid.Column="0" Height="36" Margin="0,0,10,0" VerticalAlignment="Center" />
                                 <TextBox x:Name="TxtFilePath" Grid.Column="1" Style="{StaticResource FluentTextBox}" Margin="0,0,10,0" />
                                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                                     <Button Content="Browse..." Style="{StaticResource FluentSecondaryButton}"
@@ -366,30 +541,75 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Active Transfers -->
+                    <Grid Margin="0,8,0,8">
+                        <TextBlock Text="ACTIVE TRANSFERS &amp; DOWNLOADS" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                        <Button Content="Open Downloads Folder" Style="{StaticResource FluentSecondaryButton}"
+                                HorizontalAlignment="Right" Click="BtnOpenDownloads_Click" />
+                    </Grid>
+
                     <ListBox x:Name="LstFileTransfers" Background="Transparent" BorderThickness="0">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource CardBackgroundBrush}" CornerRadius="8"
+                                <Border Background="{StaticResource CardBgBrush}" CornerRadius="8"
                                         Padding="14" Margin="0,4" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                                     <StackPanel>
-                                        <TextBlock Text="{Binding}" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                                        <TextBlock Text="{Binding}" FontSize="13" Foreground="White" />
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                </DockPanel>
-            </Grid>
+                </StackPanel>
+            </ScrollViewer>
 
             <!-- VIEW 5: NETWORK & RELAY DASHBOARD -->
             <ScrollViewer x:Name="ViewNetwork" Grid.Column="1" Visibility="Collapsed" Padding="24">
-                <StackPanel>
+                <StackPanel MaxWidth="800" HorizontalAlignment="Left">
+                    <!-- Metrics Row -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Metric 1 -->
+                        <Border Grid.Column="0" Background="{StaticResource CardBgBrush}" CornerRadius="10"
+                                Padding="18" Margin="0,0,8,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="CONNECTED PEERS" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <TextBlock x:Name="TxtMetricConnected" Text="0" FontSize="28" FontWeight="Bold" Foreground="#00BCF9" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Metric 2 -->
+                        <Border Grid.Column="1" Background="{StaticResource CardBgBrush}" CornerRadius="10"
+                                Padding="18" Margin="4,0,4,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="KNOWN ADDRESSES" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <TextBlock x:Name="TxtMetricKnown" Text="0" FontSize="28" FontWeight="Bold" Foreground="#107C41" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Metric 3 -->
+                        <Border Grid.Column="2" Background="{StaticResource CardBgBrush}" CornerRadius="10"
+                                Padding="18" Margin="8,0,0,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="RELAY STORAGE" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <TextBlock x:Name="TxtMetricRelay" Text="0 msgs (0 KB)" FontSize="18" FontWeight="Bold" Foreground="#FFB900" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
                     <!-- Connect to Peer Card -->
-                    <Border Background="{StaticResource CardBackgroundBrush}" CornerRadius="8"
-                            Padding="16" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+                    <Border Background="{StaticResource CardBgBrush}" CornerRadius="10"
+                            Padding="18" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
                         <StackPanel>
-                            <TextBlock Text="Connect to Remote P2P Node" FontSize="14" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,10" />
+                            <TextBlock Text="Connect to Remote P2P Node" FontSize="14" FontWeight="SemiBold" Foreground="White" />
+                            <TextBlock Text="Initiate a direct outbound TCP handshake with another P2P node."
+                                       FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,12" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -402,95 +622,35 @@
                             </Grid>
                         </StackPanel>
                     </Border>
-
-                    <!-- Network Status Metrics -->
-                    <Grid Margin="0,0,0,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Card 1 -->
-                        <Border Grid.Column="0" Background="{StaticResource CardBackgroundBrush}" CornerRadius="8"
-                                Padding="16" Margin="0,0,8,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                            <StackPanel>
-                                <TextBlock Text="CONNECTED PEERS" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <TextBlock x:Name="TxtMetricConnected" Text="0" FontSize="26" FontWeight="Bold"
-                                           Foreground="#00BCF9" Margin="0,4,0,0" />
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Card 2 -->
-                        <Border Grid.Column="1" Background="{StaticResource CardBackgroundBrush}" CornerRadius="8"
-                                Padding="16" Margin="4,0,4,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                            <StackPanel>
-                                <TextBlock Text="KNOWN ADDRESSES" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <TextBlock x:Name="TxtMetricKnown" Text="0" FontSize="26" FontWeight="Bold"
-                                           Foreground="#107C41" Margin="0,4,0,0" />
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Card 3 -->
-                        <Border Grid.Column="2" Background="{StaticResource CardBackgroundBrush}" CornerRadius="8"
-                                Padding="16" Margin="8,0,0,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                            <StackPanel>
-                                <TextBlock Text="RELAY STORAGE" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <TextBlock x:Name="TxtMetricRelay" Text="0 msgs (0 KB)" FontSize="18" FontWeight="Bold"
-                                           Foreground="#FFB900" Margin="0,8,0,0" />
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-
-                    <!-- Identity Hex Box -->
-                    <Border Background="{StaticResource CardBackgroundBrush}" CornerRadius="8"
-                            Padding="16" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
-                        <StackPanel>
-                            <TextBlock Text="Full Public Key (X25519)" FontSize="12" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextSecondaryBrush}" />
-                            <TextBox x:Name="TxtFullPubKey" Style="{StaticResource FluentTextBox}" IsReadOnly="True"
-                                     Margin="0,6,0,10" />
-
-                            <TextBlock Text="Full Peer ID (SHA-256)" FontSize="12" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextSecondaryBrush}" />
-                            <TextBox x:Name="TxtFullPeerId" Style="{StaticResource FluentTextBox}" IsReadOnly="True"
-                                     Margin="0,6,0,0" />
-                        </StackPanel>
-                    </Border>
                 </StackPanel>
             </ScrollViewer>
 
             <!-- VIEW 6: SETTINGS -->
             <ScrollViewer x:Name="ViewSettings" Grid.Column="1" Visibility="Collapsed" Padding="24">
                 <StackPanel MaxWidth="600" HorizontalAlignment="Left">
-                    <TextBlock Text="Settings &amp; Architecture" FontSize="18" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16" />
+                    <TextBlock Text="Settings &amp; Architecture" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,16" />
 
-                    <Border Background="{StaticResource CardBackgroundBrush}" CornerRadius="8"
-                            Padding="16" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+                    <Border Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="18"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
                         <StackPanel>
-                            <TextBlock Text="Core Technology" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
-                            <TextBlock Text="• Pure Rust Core: Zero third-party dependencies" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" />
-                            <TextBlock Text="• Native Windows GUI: Win32 DWM Mica + WPF Desktop + System Tray" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" />
+                            <TextBlock Text="Core Technology" FontWeight="SemiBold" Foreground="White" />
+                            <TextBlock Text="• Pure Rust Core: 100% Rust Standard Library (0 External Crates)" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" />
+                            <TextBlock Text="• Windows 11 Native Client: DWM Mica backdrop, Windows Core Audio, Shell Explorer" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" />
                             <TextBlock Text="• Cryptography: X25519 DH, Ed25519 Signatures, ChaCha20-Poly1305 AEAD" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" />
-                            <TextBlock Text="• Protocol: Sovereign P2P, Gossip Discovery, Store-and-Forward Relay" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" />
+                            <TextBlock Text="• Decentralized Overlay: Bitcoin-like Gossip, Store-and-Forward Relay" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" />
                         </StackPanel>
                     </Border>
-
-                    <Button Content="Open Downloads Folder in Windows Explorer"
-                            Style="{StaticResource FluentSecondaryButton}" HorizontalAlignment="Left"
-                            Click="BtnOpenDownloads_Click" />
                 </StackPanel>
             </ScrollViewer>
         </Grid>
 
-        <!-- BOTTOM STATUS BAR -->
-        <Border Grid.Row="2" Background="{StaticResource SidebarBackgroundBrush}"
-                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="12,0">
+        <!-- 3. BOTTOM STATUS BAR -->
+        <Border Grid.Row="2" Background="{StaticResource HeaderBgBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="14,0">
             <Grid VerticalAlignment="Center">
-                <TextBlock x:Name="TxtStatusBar" Text="Ready. P2P Chat Sovereign Node active." FontSize="11"
+                <TextBlock x:Name="TxtStatusBar" Text="Ready. Sovereign P2P node running." FontSize="11"
                            Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
-                <TextBlock Text="Windows 11 Native Client (WIU)" FontSize="11" Foreground="#666666"
+                <TextBlock Text="WIU v1.0 · Pure Rust Core" FontSize="10" Foreground="{StaticResource TextMutedBrush}"
                            HorizontalAlignment="Right" VerticalAlignment="Center" />
             </Grid>
         </Border>
