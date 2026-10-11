@@ -13,10 +13,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\target\debug\p2pchat.dll" Condition="Exists('..\target\debug\p2pchat.dll')">
+    <None Include="..\target\release\p2pchat.dll" Condition="Exists('..\target\release\p2pchat.dll')">
       <Link>p2pchat.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\target\debug\p2pchat.dll" Condition="!Exists('..\target\release\p2pchat.dll') And Exists('..\target\debug\p2pchat.dll')">
+      <Link>p2pchat.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <EmbeddedResource Include="..\target\release\p2pchat.dll" Condition="Exists('..\target\release\p2pchat.dll')" LogicalName="P2PChatApp.p2pchat.dll" />
+    <EmbeddedResource Include="..\target\debug\p2pchat.dll" Condition="!Exists('..\target\release\p2pchat.dll') And Exists('..\target\debug\p2pchat.dll')" LogicalName="P2PChatApp.p2pchat.dll" />
   </ItemGroup>
 
 </Project>

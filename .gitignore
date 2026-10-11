@@ -17,4 +17,6 @@ target/
 **/bin/
 **/obj/
 p2p_data_win/
-
+dist/
+publish/
+publish-single/

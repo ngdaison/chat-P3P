@@ -69,4 +69,62 @@ internal static class NativeMethods
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int p2p_node_poll_event(IntPtr handle, byte[] outBuf, nuint maxLen);
+
+    static NativeMethods()
+    {
+        NativeLibrary.SetDllImportResolver(typeof(NativeMethods).Assembly, ResolveDll);
+    }
+
+    private static IntPtr ResolveDll(string libraryName, System.Reflection.Assembly assembly, DllImportSearchPath? searchPath)
+    {
+        if (libraryName.Equals(DllName, StringComparison.OrdinalIgnoreCase) || libraryName.Equals("p2pchat", StringComparison.OrdinalIgnoreCase))
+        {
+            // 1. Try application base directory
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string localDll = System.IO.Path.Combine(baseDir, DllName);
+            if (System.IO.File.Exists(localDll) && NativeLibrary.TryLoad(localDll, out IntPtr hLocal))
+            {
+                return hLocal;
+            }
+
+            // 2. Try extract from embedded manifest resource
+            try
+            {
+                string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "p2pchat_embedded");
+                System.IO.Directory.CreateDirectory(tempDir);
+                string targetDll = System.IO.Path.Combine(tempDir, DllName);
+
+                using var stream = assembly.GetManifestResourceStream("P2PChatApp.p2pchat.dll");
+                if (stream != null)
+                {
+                    bool needWrite = true;
+                    if (System.IO.File.Exists(targetDll))
+                    {
+                        var fi = new System.IO.FileInfo(targetDll);
+                        if (fi.Length == stream.Length)
+                        {
+                            needWrite = false;
+                        }
+                    }
+
+                    if (needWrite)
+                    {
+                        using var fs = new System.IO.FileStream(targetDll, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.Read);
+                        stream.CopyTo(fs);
+                        fs.Flush();
+                    }
+
+                    if (NativeLibrary.TryLoad(targetDll, out IntPtr hTemp))
+                    {
+                        return hTemp;
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback to default loader
+            }
+        }
+        return IntPtr.Zero;
+    }
 }
