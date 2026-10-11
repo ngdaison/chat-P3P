@@ -97,3 +97,22 @@ public class FileTransferItem
     public string Status { get; set; } = "In Progress";
     public double ProgressPercent => TotalChunks > 0 ? ((double)CompletedChunks / TotalChunks) * 100.0 : 0.0;
 }
+
+public class DiscoveredPeerDto
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+
+    [JsonPropertyName("peer_id")]
+    public string PeerId { get; set; } = "";
+
+    [JsonPropertyName("public_key")]
+    public string PublicKey { get; set; } = "";
+
+    [JsonPropertyName("address")]
+    public string Address { get; set; } = "";
+
+    public string ShortKey => PublicKey.Length > 16 ? $"{PublicKey[..8]}...{PublicKey[^8..]}" : PublicKey;
+    public string SmartInviteCode => $"{PublicKey}@{Address}";
+}
+

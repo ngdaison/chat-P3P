@@ -70,6 +70,12 @@ internal static class NativeMethods
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int p2p_node_poll_event(IntPtr handle, byte[] outBuf, nuint maxLen);
 
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int p2p_node_get_discovered_peers_json(IntPtr handle, byte[] outBuf, nuint maxLen);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int p2p_node_trigger_discovery_scan(IntPtr handle);
+
     static NativeMethods()
     {
         NativeLibrary.SetDllImportResolver(typeof(NativeMethods).Assembly, ResolveDll);
@@ -109,9 +115,16 @@ internal static class NativeMethods
 
                     if (needWrite)
                     {
-                        using var fs = new System.IO.FileStream(targetDll, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.Read);
-                        stream.CopyTo(fs);
-                        fs.Flush();
+                        try
+                        {
+                            using var fs = new System.IO.FileStream(targetDll, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.Read);
+                            stream.CopyTo(fs);
+                            fs.Flush();
+                        }
+                        catch
+                        {
+                            // If file is locked or out of space, attempt loading targetDll directly
+                        }
                     }
 
                     if (NativeLibrary.TryLoad(targetDll, out IntPtr hTemp))

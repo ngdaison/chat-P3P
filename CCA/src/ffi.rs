@@ -173,6 +173,15 @@ pub unsafe extern "C" fn p2p_node_start(
                     added
                 )
             }
+            NodeEvent::PeerDiscovered { peer_id, public_key, addr, device_name } => {
+                format!(
+                    r#"{{"event":"peer_discovered","peer_id":"{}","public_key":"{}","address":"{}","device_name":"{}"}}"#,
+                    peer_id.to_hex(),
+                    to_hex(public_key),
+                    addr,
+                    escape_json(device_name)
+                )
+            }
             NodeEvent::Notice(msg) => {
                 format!(r#"{{"event":"notice","message":"{}"}}"#, escape_json(msg))
             }
@@ -590,3 +599,41 @@ pub unsafe extern "C" fn p2p_node_poll_event(
         0
     }
 }
+
+/// Retrieves list of auto-discovered LAN/Wi-Fi peers as a JSON array string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn p2p_node_get_discovered_peers_json(
+    handle: *mut P2pNodeHandle,
+    out_buf: *mut c_char,
+    max_len: usize,
+) -> c_int {
+    if handle.is_null() {
+        return -1;
+    }
+    let h = &*handle;
+    let peers = h.node.get_discovered_peers();
+    let mut items = Vec::new();
+    for p in peers {
+        items.push(format!(
+            r#"{{"name":"{}","peer_id":"{}","public_key":"{}","address":"{}"}}"#,
+            escape_json(&p.device_name),
+            p.peer_id.to_hex(),
+            to_hex(&p.public_key),
+            p.addr
+        ));
+    }
+    let json = format!("[{}]", items.join(","));
+    copy_to_c_buffer(&json, out_buf, max_len)
+}
+
+/// Manually triggers an immediate UDP beacon broadcast on local network.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn p2p_node_trigger_discovery_scan(handle: *mut P2pNodeHandle) -> c_int {
+    if handle.is_null() {
+        return -1;
+    }
+    let h = &*handle;
+    h.node.trigger_discovery_scan();
+    0
+}
+

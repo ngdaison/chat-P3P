@@ -58,6 +58,12 @@ pub enum NodeEvent {
         member: PeerId,
         added: bool,
     },
+    PeerDiscovered {
+        peer_id: PeerId,
+        public_key: [u8; 32],
+        addr: SocketAddr,
+        device_name: String,
+    },
     Notice(String),
 }
 

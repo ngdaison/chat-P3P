@@ -26,6 +26,7 @@ public class P2pNodeService : IDisposable
     public event Action<string, string>? FileFailed;
     public event Action<string, string, string, string, long>? GroupMessageReceived;
     public event Action<string, string, string, bool>? GroupMembershipChanged;
+    public event Action<DiscoveredPeerDto>? PeerDiscovered;
     public event Action<string>? NoticeReceived;
 
     public bool Start(string dataDir, string listenAddr, bool isRelay)
@@ -252,6 +253,36 @@ public class P2pNodeService : IDisposable
         }
     }
 
+    public List<DiscoveredPeerDto> GetDiscoveredPeers()
+    {
+        lock (_lock)
+        {
+            if (!IsRunning) return new();
+            byte[] buf = new byte[65536];
+            int len = NativeMethods.p2p_node_get_discovered_peers_json(_handle, buf, (nuint)buf.Length);
+            if (len <= 0) return new();
+
+            string json = Encoding.UTF8.GetString(buf, 0, len);
+            try
+            {
+                return JsonSerializer.Deserialize<List<DiscoveredPeerDto>>(json) ?? new();
+            }
+            catch
+            {
+                return new();
+            }
+        }
+    }
+
+    public void TriggerDiscoveryScan()
+    {
+        lock (_lock)
+        {
+            if (!IsRunning) return;
+            NativeMethods.p2p_node_trigger_discovery_scan(_handle);
+        }
+    }
+
     private void EventLoop(CancellationToken ct)
     {
         byte[] buf = new byte[16384];
@@ -359,6 +390,17 @@ public class P2pNodeService : IDisposable
                         root.GetProperty("group_name").GetString() ?? "",
                         root.GetProperty("member").GetString() ?? "",
                         root.GetProperty("added").GetBoolean());
+                    break;
+
+                case "peer_discovered":
+                    var discovered = new DiscoveredPeerDto
+                    {
+                        PeerId = root.GetProperty("peer_id").GetString() ?? "",
+                        PublicKey = root.GetProperty("public_key").GetString() ?? "",
+                        Address = root.GetProperty("address").GetString() ?? "",
+                        Name = root.GetProperty("device_name").GetString() ?? ""
+                    };
+                    PeerDiscovered?.Invoke(discovered);
                     break;
 
                 case "notice":

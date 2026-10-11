@@ -9,7 +9,7 @@ pub mod protocol;
 pub mod rate_limiter;
 
 pub use connection::PeerConnection;
-pub use discovery::{PeerAddressBook, PeerStats};
+pub use discovery::{DiscoveredPeer, PeerAddressBook, PeerStats, UdpBeaconDiscovery};
 pub use frame::{Frame, HEADER_LEN};
 pub use peer_manager::{PeerManager, PeerSession};
 pub use protocol::{

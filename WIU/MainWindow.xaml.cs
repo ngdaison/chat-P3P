@@ -100,6 +100,7 @@ public partial class MainWindow : Window
         _node.FileOfferReceived += OnFileOfferReceived;
         _node.FileCompleted += OnFileCompleted;
         _node.GroupMessageReceived += OnGroupMessageReceived;
+        _node.PeerDiscovered += OnPeerDiscovered;
         _node.NoticeReceived += OnNoticeReceived;
 
         // 3. Populate Initial Data
@@ -107,16 +108,33 @@ public partial class MainWindow : Window
         TxtFullPeerId.Text = _node.PeerId;
         TxtFullPubKey.Text = _node.PublicKey;
 
+        // Compute local Smart Invite Code
+        string localIp = "127.0.0.1";
+        try
+        {
+            var host = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !System.Net.IPAddress.IsLoopback(ip))
+                {
+                    localIp = ip.ToString();
+                    break;
+                }
+            }
+        }
+        catch { }
+        TxtMySmartInvite.Text = $"{_node.PublicKey}@{localIp}:{_boundPort}";
+
         RefreshContacts();
         RefreshGroups();
         RefreshMessages();
-        RefreshNetworkStats();
+        RefreshDiscoveredDevices();
 
-        // 4. Background refresh timer (every 2s for stats & transfers)
+        // 4. Background refresh timer (every 2s for discovered devices & transfers)
         _pollTimer.Interval = TimeSpan.FromSeconds(2.0);
         _pollTimer.Tick += (s, ev) =>
         {
-            RefreshNetworkStats();
+            RefreshDiscoveredDevices();
             RefreshFileTransfers();
         };
         _pollTimer.Start();
@@ -163,7 +181,7 @@ public partial class MainWindow : Window
         LblNavNetworking.Text = isEn ? "NETWORK & SECURITY" : "MẠNG & BẢO MẬT";
         NavContacts.Content = isEn ? "📖  Contacts Book" : "📖  Danh bạ liên hệ";
         NavFiles.Content = isEn ? "📁  File Transfers" : "📁  Truyền tệp tin";
-        NavNetwork.Content = isEn ? "🌐  P2P & Relay Network" : "🌐  Mạng P2P & Relay";
+        NavNearby.Content = isEn ? "📡  Nearby Devices" : "📡  Thiết bị lân cận";
         NavSettings.Content = isEn ? "⚙️  Settings" : "⚙️  Cài đặt";
 
         // Direct Chat View
@@ -193,7 +211,7 @@ public partial class MainWindow : Window
         LblPeerIdTitle.Text = isEn ? "Peer ID (SHA-256 Identifier):" : "Mã định danh Peer ID (SHA-256):";
         BtnCopyPeerId.Content = isEn ? "Copy ID" : "Sao chép ID";
         LblAddContactTitle.Text = isEn ? "Add New Peer to Contacts" : "Thêm Bạn Mới Vào Danh Bạ";
-        LblAddContactDesc.Text = isEn ? "Enter a nickname and paste your peer's 64-char hex public key." : "Nhập tên gợi nhớ và dán khóa công khai hex 64 ký tự của bạn bè.";
+        LblAddContactDesc.Text = isEn ? "Enter a nickname and paste your peer's Public Key or Smart Invite Code (auto-connects)." : "Nhập tên gợi nhớ và dán Khóa công khai hoặc Mã mời thông minh của bạn bè (tự động kết nối).";
         BtnAddContact.Content = isEn ? "+ Add Contact" : "+ Thêm Liên Hệ";
         LblSavedContacts.Text = isEn ? "SAVED CONTACTS" : "DANH SÁCH LIÊN HỆ ĐÃ LƯU";
 
@@ -205,13 +223,18 @@ public partial class MainWindow : Window
         LblActiveTransfers.Text = isEn ? "FILE TRANSFERS & DOWNLOADS" : "DANH SÁCH TRUYỀN TỆP & TẢI VỀ";
         BtnOpenDownloads.Content = isEn ? "Open Downloads Folder" : "Mở thư mục Tải về";
 
-        // Network Dashboard View
-        LblMetricConnected.Text = isEn ? "DIRECT CONNECTED PEERS" : "NODE KẾT NỐI TRỰC TIẾP";
-        LblMetricKnown.Text = isEn ? "KNOWN NETWORK ADDRESSES" : "ĐỊA CHỈ TRONG MẠNG";
-        LblMetricRelay.Text = isEn ? "STORE-AND-FORWARD RELAY" : "DUNG LƯỢNG LƯU HỘ RELAY";
-        LblConnectTitle.Text = isEn ? "Connect to Remote Peer Node" : "Kết Nối Tới Node P2P Khác";
-        LblConnectDesc.Text = isEn ? "Initiate direct TCP handshake with a remote P2P node." : "Khởi tạo bắt tay TCP trực tiếp với một node P2P khác trong mạng.";
-        BtnConnectPeer.Content = isEn ? "Connect Node" : "Kết Nối Node";
+        // Nearby Devices View
+        LblNearbyHeader.Text = isEn ? "Nearby Devices & Auto-Discovery" : "Thiết Bị Lân Cận & Tự Động Kết Nối";
+        LblNearbySub.Text = isEn ? "Auto-discover peers on the same Wi-Fi/LAN and chat instantly without entering IP." : "Tự động dò tìm bạn bè trong cùng mạng Wi-Fi/LAN và kết nối tức thì không cần nhập IP.";
+        LblRadarStatus.Text = isEn ? "Wi-Fi/LAN radar is actively scanning" : "Ra-đa quét Wi-Fi/LAN đang hoạt động";
+        LblRadarSub.Text = isEn ? "Broadcasting and listening for peer beacon signals on local network" : "Đang tự động phát và bắt sóng beacon ngang hàng P2P trong mạng nội bộ";
+        BtnScanNearby.Content = isEn ? "🔄 Scan Now" : "🔄 Quét Lại Ngay";
+        LblInviteTitle.Text = isEn ? "YOUR SMART P2P INVITE CODE" : "MÃ MỜI P2P THÔNG MINH CỦA BẠN";
+        BtnCopySmartInvite.Content = isEn ? "📋 Copy Invite Code" : "📋 Sao chép Mã Mời";
+        LblInviteDesc.Text = isEn ? "💡 Send this code to a friend. When pasted into Contacts, both computers connect automatically!" : "💡 Bạn chỉ cần gửi mã này cho bạn bè. Bạn bè dán vào mục Danh bạ là hai máy tự động kết nối và chat ngay lập tức!";
+        LblNearbyListTitle.Text = isEn ? "DEVICES FOUND ON LOCAL NETWORK" : "THIẾT BỊ PHÁT HIỆN TRONG MẠNG LAN";
+        LblNoNearbyTitle.Text = isEn ? "No other devices detected on local network yet" : "Chưa phát hiện thiết bị nào khác trong mạng";
+        LblNoNearbyDesc.Text = isEn ? "When friends open P2P Chat on the same Wi-Fi or LAN, their device will appear here for 1-click messaging." : "Khi bạn bè mở ứng dụng P2P Chat trong cùng mạng Wi-Fi hoặc mạng LAN, thiết bị sẽ tự động xuất hiện tại đây để bạn nhắn tin chỉ với 1 click.";
 
         // Settings View
         LblSettingsHeader.Text = isEn ? "System Settings & Preferences" : "Cài Đặt & Ngôn Ngữ Hệ Thống";
@@ -227,7 +250,7 @@ public partial class MainWindow : Window
         TxtStatusBar.Text = isEn ? "Ready. Distributed P2P node is operational." : "Sẵn sàng. Node P2P phân tán đang hoạt động.";
         TxtAppVersion.Text = isEn ? "WIU v1.0 · Pure Rust Core" : "WIU v1.0 · Nhân Rust Thuần";
 
-        RefreshNetworkStats();
+        RefreshDiscoveredDevices();
     }
 
     // --- Window Chrome Caption Buttons ---
@@ -267,7 +290,7 @@ public partial class MainWindow : Window
         {
             bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
             TxtStatusBar.Text = isEn ? $"Connected to peer: {addr}" : $"Đã kết nối với node: {addr}";
-            RefreshNetworkStats();
+            RefreshDiscoveredDevices();
         });
     }
 
@@ -278,7 +301,7 @@ public partial class MainWindow : Window
             string shortId = peerId.Length > 8 ? peerId[..8] : peerId;
             bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
             TxtStatusBar.Text = isEn ? $"Peer disconnected: {shortId}" : $"Node đã ngắt kết nối: {shortId}";
-            RefreshNetworkStats();
+            RefreshDiscoveredDevices();
         });
     }
 
@@ -338,8 +361,12 @@ public partial class MainWindow : Window
         ViewGroupChat.Visibility = NavGroupChat.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         ViewContacts.Visibility = NavContacts.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         ViewFiles.Visibility = NavFiles.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        ViewNetwork.Visibility = NavNetwork.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        ViewNearby.Visibility = NavNearby.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         ViewSettings.Visibility = NavSettings.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (NavNearby.IsChecked == true)
+        {
+            RefreshDiscoveredDevices();
+        }
     }
 
     private void BtnNavToAddContact_Click(object sender, RoutedEventArgs e)
@@ -621,10 +648,17 @@ public partial class MainWindow : Window
             string pubkey = TxtNewContactPubKey.Text.Trim();
             bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
 
-            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(pubkey))
+            if (string.IsNullOrEmpty(pubkey))
             {
-                TxtStatusBar.Text = isEn ? "Please enter both Contact Nickname and 64-char Hex Public Key." : "Vui lòng nhập cả Tên gợi nhớ và Khóa công khai Hex 64 ký tự.";
+                TxtStatusBar.Text = isEn ? "Please enter Public Key or Smart Invite Code." : "Vui lòng dán Khóa công khai hoặc Mã mời thông minh.";
                 return;
+            }
+
+            if (string.IsNullOrEmpty(name))
+            {
+                string shortKey = pubkey.Contains('@') ? pubkey.Split('@')[0] : pubkey;
+                if (shortKey.Length > 8) shortKey = shortKey[..8];
+                name = (isEn ? "Peer_" : "Bạn_") + shortKey;
             }
 
             bool ok = _node.AddContact(name, pubkey);
@@ -633,11 +667,19 @@ public partial class MainWindow : Window
                 TxtNewContactName.Text = "";
                 TxtNewContactPubKey.Text = "";
                 RefreshContacts();
-                TxtStatusBar.Text = isEn ? $"Contact '{name}' added successfully." : $"Đã thêm liên hệ '{name}' thành công.";
+                TxtStatusBar.Text = isEn ? $"Contact '{name}' added successfully. Connecting..." : $"Đã thêm liên hệ '{name}' thành công. Đang tự động kết nối...";
+
+                var added = _allContacts.FirstOrDefault(c => c.Name == name);
+                if (added != null)
+                {
+                    _selectedContact = added;
+                    NavDirectChat.IsChecked = true;
+                    LstChatContacts.SelectedItem = added;
+                }
             }
             else
             {
-                TxtStatusBar.Text = isEn ? "Invalid Public Key hex format (must be 64 valid hex characters)." : "Định dạng khóa hex không hợp lệ (phải đúng 64 ký tự hex).";
+                TxtStatusBar.Text = isEn ? "Invalid Public Key hex format (must be 64 valid hex characters) or invalid invite code." : "Định dạng khóa hex không hợp lệ (phải đúng 64 ký tự hex) hoặc mã mời không hợp lệ.";
             }
         }
         catch (Exception ex)
@@ -737,25 +779,58 @@ public partial class MainWindow : Window
         }
     }
 
-    // --- Network & Relay Dashboard ---
+    // --- Nearby Devices & Auto-Discovery ---
 
-    private void BtnConnectPeer_Click(object sender, RoutedEventArgs e)
+    private void OnPeerDiscovered(DiscoveredPeerDto peer)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            RefreshDiscoveredDevices();
+        });
+    }
+
+    private void RefreshDiscoveredDevices()
     {
         try
         {
-            string addr = TxtConnectPeerAddr.Text.Trim();
-            if (string.IsNullOrEmpty(addr)) return;
-
+            var peers = _node.GetDiscoveredPeers();
+            LstDiscoveredDevices.ItemsSource = peers;
             bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
-            bool ok = _node.ConnectPeer(addr);
-            if (ok)
+            TxtDiscoveredCount.Text = isEn ? $"{peers.Count} devices" : $"{peers.Count} thiết bị";
+            PnlNoNearby.Visibility = peers.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+            var stats = _node.GetNetworkStats();
+            TxtPeerCount.Text = isEn
+                ? $"{stats.ConnectedPeers.Count} peer(s) connected"
+                : $"{stats.ConnectedPeers.Count} node đang kết nối";
+        }
+        catch { }
+    }
+
+    private void BtnScanNearby_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _node.TriggerDiscoveryScan();
+            RefreshDiscoveredDevices();
+            bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
+            TxtStatusBar.Text = isEn ? "Sent local discovery beacon to Wi-Fi/LAN." : "Đã phát sóng quét tìm kiếm lân cận trên Wi-Fi/LAN.";
+        }
+        catch (Exception ex)
+        {
+            TxtStatusBar.Text = $"Lỗi: {ex.Message}";
+        }
+    }
+
+    private void BtnCopySmartInvite_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(TxtMySmartInvite.Text))
             {
-                TxtStatusBar.Text = isEn ? $"TCP Handshake initiated to {addr}." : $"Đã bắt đầu bắt tay TCP tới {addr}.";
-                RefreshNetworkStats();
-            }
-            else
-            {
-                TxtStatusBar.Text = isEn ? $"Failed to connect to {addr}. Check remote node status." : $"Kết nối thất bại tới {addr}. Vui lòng kiểm tra node từ xa.";
+                SafeSetClipboardText(TxtMySmartInvite.Text);
+                bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
+                TxtStatusBar.Text = isEn ? "Smart invite code copied to clipboard!" : "Đã sao chép Mã Mời thông minh vào khay nhớ tạm!";
             }
         }
         catch (Exception ex)
@@ -764,18 +839,35 @@ public partial class MainWindow : Window
         }
     }
 
-    private void RefreshNetworkStats()
+    private void BtnAddDiscoveredPeer_Click(object sender, RoutedEventArgs e)
     {
-        var stats = _node.GetNetworkStats();
-        TxtMetricConnected.Text = stats.ConnectedPeers.Count.ToString();
-        TxtMetricKnown.Text = stats.KnownAddresses.Count.ToString();
-        bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
-        TxtMetricRelay.Text = isEn
-            ? $"{stats.RelayStoredCount} msgs ({stats.RelayStoredBytes / 1024} KB)"
-            : $"{stats.RelayStoredCount} tin ({stats.RelayStoredBytes / 1024} KB)";
-        TxtPeerCount.Text = isEn
-            ? $"{stats.ConnectedPeers.Count} peer(s) connected"
-            : $"{stats.ConnectedPeers.Count} node đang kết nối";
+        try
+        {
+            if (sender is Button btn && btn.Tag is DiscoveredPeerDto peer)
+            {
+                bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
+                string defaultName = string.IsNullOrWhiteSpace(peer.Name) ? $"Peer_{peer.Address.Replace(':', '_')}" : peer.Name;
+                
+                // Automatically add as contact and connect
+                bool ok = _node.AddContact(defaultName, peer.SmartInviteCode);
+                if (ok)
+                {
+                    RefreshContacts();
+                    TxtStatusBar.Text = isEn ? $"Added {defaultName} and connected!" : $"Đã thêm {defaultName} vào danh bạ và kết nối thành công!";
+                    // Switch to direct chat with them
+                    var added = _allContacts.FirstOrDefault(c => c.Name == defaultName);
+                    if (added != null)
+                    {
+                        LstChatContacts.SelectedItem = added;
+                    }
+                    NavDirectChat.IsChecked = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            TxtStatusBar.Text = $"Lỗi: {ex.Message}";
+        }
     }
 
     public void ShowErrorMessage(string message)

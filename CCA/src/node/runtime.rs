@@ -20,7 +20,7 @@ use crate::messaging::envelope::MessageEnvelope;
 use crate::messaging::message::ChatMessage;
 use crate::messaging::router::MessageRouter;
 use crate::network::connection::PeerConnection;
-use crate::network::discovery::PeerAddressBook;
+use crate::network::discovery::{DiscoveredPeer, PeerAddressBook, UdpBeaconDiscovery};
 use crate::network::frame::Frame;
 use crate::network::peer_manager::{PeerManager, PeerSession};
 use crate::network::protocol::{
@@ -48,6 +48,7 @@ pub struct Node {
     pub file_manager: Arc<FileTransferManager>,
     pub group_manager: Arc<GroupManager>,
     pub debug_mode: Arc<AtomicBool>,
+    pub udp_discovery: Option<Arc<UdpBeaconDiscovery>>,
     running: Arc<AtomicBool>,
     worker_threads: Mutex<Vec<JoinHandle<()>>>,
 }
@@ -132,6 +133,12 @@ impl Node {
         let group_manager = Arc::new(GroupManager::new());
         let debug_mode = Arc::new(AtomicBool::new(false));
 
+        let udp_discovery = UdpBeaconDiscovery::new(
+            *identity.peer_id(),
+            *identity.public_key(),
+            config.listen_address.port(),
+        ).ok();
+
         let node = Arc::new(Self {
             config,
             identity,
@@ -146,6 +153,7 @@ impl Node {
             file_manager,
             group_manager,
             debug_mode,
+            udp_discovery,
             running,
             worker_threads: Mutex::new(Vec::new()),
         });
@@ -252,6 +260,22 @@ impl Node {
                             break;
                         }
                         let _ = node.connect_peer(addr);
+                    }
+
+                    // Auto-connect discovered peers that match our contact book
+                    if let Some(disc) = &node.udp_discovery {
+                        let contacts_list: Vec<Contact> = {
+                            let book = node.contacts.lock().unwrap();
+                            book.list().into_iter().cloned().collect()
+                        };
+                        let connected = node.peer_manager.get_connected_peers();
+                        for c in contacts_list {
+                            if !connected.contains(&c.peer_id) {
+                                if let Some(addr) = disc.find_addr_by_pubkey(&c.public_key) {
+                                    let _ = node.connect_peer(addr);
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -545,14 +569,50 @@ impl Node {
         self.router.send_message(contact_name, text)
     }
 
-    pub fn add_contact(&self, name: &str, pubkey_hex: &str) -> Result<Contact, String> {
-        let mut book = self.contacts.lock().unwrap();
-        book.add_from_hex(name, pubkey_hex)
+    pub fn add_contact(self: &Arc<Self>, name: &str, pubkey_hex: &str) -> Result<Contact, String> {
+        let trimmed = pubkey_hex.trim();
+        let (clean_pubkey_hex, explicit_addr) = if let Some(idx) = trimmed.find('@') {
+            let (pk, addr_part) = trimmed.split_at(idx);
+            let addr_str = &addr_part[1..];
+            (pk.trim(), addr_str.trim().parse::<SocketAddr>().ok())
+        } else {
+            (trimmed, None)
+        };
+
+        let contact = {
+            let mut book = self.contacts.lock().unwrap();
+            book.add_from_hex(name, clean_pubkey_hex)?
+        };
+
+        // Automatic connection trigger:
+        if let Some(addr) = explicit_addr {
+            let _ = self.connect_peer(addr);
+        } else if let Some(disc) = &self.udp_discovery {
+            if let Some(addr) = disc.find_addr_by_pubkey(&contact.public_key) {
+                let _ = self.connect_peer(addr);
+            }
+        }
+
+        Ok(contact)
     }
 
     pub fn list_contacts(&self) -> Vec<Contact> {
         let book = self.contacts.lock().unwrap();
         book.list().into_iter().cloned().collect()
+    }
+
+    pub fn get_discovered_peers(&self) -> Vec<DiscoveredPeer> {
+        if let Some(disc) = &self.udp_discovery {
+            disc.get_discovered()
+        } else {
+            Vec::new()
+        }
+    }
+
+    pub fn trigger_discovery_scan(&self) {
+        if let Some(disc) = &self.udp_discovery {
+            disc.broadcast_beacon();
+        }
     }
 
     pub fn get_inbox(&self) -> Vec<ChatMessage> {
@@ -792,6 +852,10 @@ impl Node {
     pub fn stop(&self) {
         if !self.running.swap(false, Ordering::SeqCst) {
             return; // Already stopped
+        }
+
+        if let Some(disc) = &self.udp_discovery {
+            disc.stop();
         }
 
         // Send GOODBYE to all connected peers

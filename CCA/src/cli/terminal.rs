@@ -133,6 +133,11 @@ pub fn run_interactive(node: Arc<Node>) {
             print!("> ");
             let _ = io::stdout().flush();
         }
+        NodeEvent::PeerDiscovered { peer_id, addr, device_name, .. } => {
+            println!("\n[Discovery] Found nearby peer: {} ({}) at {}", device_name, peer_id, addr);
+            print!("> ");
+            let _ = io::stdout().flush();
+        }
         NodeEvent::Notice(msg) => {
             println!("\n[Notice] {}", msg);
             print!("> ");
