@@ -12,3 +12,9 @@ target/
 /charlie/
 .idea/
 .vscode/
+[Bb]in/
+[Oo]bj/
+**/bin/
+**/obj/
+p2p_data_win/
+

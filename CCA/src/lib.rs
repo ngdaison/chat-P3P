@@ -6,6 +6,7 @@ pub mod config;
 pub mod crypto;
 pub mod error;
 pub mod events;
+pub mod ffi;
 pub mod files;
 pub mod groups;
 pub mod identity;

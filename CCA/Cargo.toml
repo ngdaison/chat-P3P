@@ -9,6 +9,8 @@ license = "MIT"
 [lib]
 name = "p2pchat"
 path = "src/lib.rs"
+crate-type = ["lib", "cdylib"]
+
 
 [[bin]]
 name = "p2pchat"

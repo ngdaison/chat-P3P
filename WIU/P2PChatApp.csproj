@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationTitle>P2P Chat - Sovereign Windows Client</ApplicationTitle>
+    <AssemblyName>P2PChatApp</AssemblyName>
+    <RootNamespace>P2PChatApp</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\target\debug\p2pchat.dll" Condition="Exists('..\target\debug\p2pchat.dll')">
+      <Link>p2pchat.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
