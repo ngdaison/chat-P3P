@@ -31,7 +31,11 @@ public partial class PromptDialog : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        WindowsNative.EnableMicaAndDarkMode(this);
+        try
+        {
+            WindowsNative.EnableMicaAndDarkMode(this);
+        }
+        catch { }
     }
 
     private void BtnOk_Click(object sender, RoutedEventArgs e)
@@ -47,12 +51,20 @@ public partial class PromptDialog : Window
         Close();
     }
 
-    public static string? Show(Window owner, string title, string prompt, string defaultValue = "")
+    public static string? Show(Window? owner, string title, string prompt, string defaultValue = "")
     {
-        var dlg = new PromptDialog(title, prompt, defaultValue)
+        try
         {
-            Owner = owner
-        };
-        return dlg.ShowDialog() == true ? dlg.InputText : null;
+            var dlg = new PromptDialog(title, prompt, defaultValue);
+            if (owner != null && owner.IsLoaded && owner.IsVisible)
+            {
+                dlg.Owner = owner;
+            }
+            return dlg.ShowDialog() == true ? dlg.InputText : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

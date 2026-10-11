@@ -4,16 +4,25 @@
         Title="Nhập dữ liệu" Height="190" Width="430"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="{StaticResource WindowBgBrush}">
+        Background="{DynamicResource WindowBgBrush}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Styles/FluentStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
     <Border Padding="20">
         <StackPanel VerticalAlignment="Center">
             <TextBlock x:Name="TxtPromptMessage" Text="Vui lòng nhập giá trị:"
-                       FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12" />
-            <TextBox x:Name="TxtInput" Style="{StaticResource FluentTextBox}" Margin="0,0,0,16" />
+                       FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12" />
+            <TextBox x:Name="TxtInput" Style="{DynamicResource FluentTextBox}" Margin="0,0,0,16" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="BtnCancel" Content="Hủy bỏ" Style="{StaticResource FluentSecondaryButton}"
+                <Button x:Name="BtnCancel" Content="Hủy bỏ" Style="{DynamicResource FluentSecondaryButton}"
                         IsCancel="True" Click="BtnCancel_Click" Margin="0,0,8,0" />
-                <Button x:Name="BtnOk" Content="Xác nhận" Style="{StaticResource FluentPrimaryButton}"
+                <Button x:Name="BtnOk" Content="Xác nhận" Style="{DynamicResource FluentPrimaryButton}"
                         IsDefault="True" Click="BtnOk_Click" />
             </StackPanel>
         </StackPanel>

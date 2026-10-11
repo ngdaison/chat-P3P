@@ -489,41 +489,55 @@ public partial class MainWindow : Window
 
     private void BtnCreateGroup_Click(object sender, RoutedEventArgs e)
     {
-        bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
-        string title = isEn ? "Create Group" : "Tạo nhóm mới";
-        string prompt = isEn ? "Enter encrypted group name:" : "Nhập tên nhóm trò chuyện mã hóa:";
-        string? groupName = PromptDialog.Show(this, title, prompt, "DevTeam");
-        if (!string.IsNullOrWhiteSpace(groupName))
+        try
         {
-            var res = _node.CreateGroup(groupName.Trim());
-            if (res.Success)
+            bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
+            string title = isEn ? "Create Group" : "Tạo nhóm mới";
+            string prompt = isEn ? "Enter encrypted group name:" : "Nhập tên nhóm trò chuyện mã hóa:";
+            string? groupName = PromptDialog.Show(this, title, prompt, "DevTeam");
+            if (!string.IsNullOrWhiteSpace(groupName))
             {
-                RefreshGroups();
-                TxtStatusBar.Text = isEn ? $"Encrypted group '{groupName}' created." : $"Đã tạo nhóm trò chuyện '{groupName}'.";
+                var res = _node.CreateGroup(groupName.Trim());
+                if (res.Success)
+                {
+                    RefreshGroups();
+                    TxtStatusBar.Text = isEn ? $"Encrypted group '{groupName}' created." : $"Đã tạo nhóm trò chuyện '{groupName}'.";
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            TxtStatusBar.Text = $"Lỗi: {ex.Message}";
         }
     }
 
     private void BtnAddGroupMember_Click(object sender, RoutedEventArgs e)
     {
-        if (_selectedGroup == null) return;
-
-        bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
-        string title = isEn ? "Add Member" : "Thêm thành viên";
-        string prompt = isEn ? "Enter contact nickname to add to group:" : "Nhập tên gợi nhớ của liên hệ cần thêm vào nhóm:";
-        string? contactName = PromptDialog.Show(this, title, prompt, "");
-        if (!string.IsNullOrWhiteSpace(contactName))
+        try
         {
-            bool ok = _node.AddGroupMember(_selectedGroup.GroupId, contactName.Trim());
-            if (ok)
+            if (_selectedGroup == null) return;
+
+            bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
+            string title = isEn ? "Add Member" : "Thêm thành viên";
+            string prompt = isEn ? "Enter contact nickname to add to group:" : "Nhập tên gợi nhớ của liên hệ cần thêm vào nhóm:";
+            string? contactName = PromptDialog.Show(this, title, prompt, "");
+            if (!string.IsNullOrWhiteSpace(contactName))
             {
-                RefreshGroups();
-                TxtStatusBar.Text = isEn ? $"Added '{contactName}' to group. Epoch symmetric key rotated." : $"Đã thêm '{contactName}' vào nhóm. Khóa đối xứng Epoch đã được luân phiên bảo mật.";
+                bool ok = _node.AddGroupMember(_selectedGroup.GroupId, contactName.Trim());
+                if (ok)
+                {
+                    RefreshGroups();
+                    TxtStatusBar.Text = isEn ? $"Added '{contactName}' to group. Epoch symmetric key rotated." : $"Đã thêm '{contactName}' vào nhóm. Khóa đối xứng Epoch đã được luân phiên bảo mật.";
+                }
+                else
+                {
+                    TxtStatusBar.Text = isEn ? $"Failed to add '{contactName}' to group. Ensure contact exists." : $"Không thể thêm '{contactName}' vào nhóm. Hãy chắc chắn liên hệ đã tồn tại trong danh bạ.";
+                }
             }
-            else
-            {
-                TxtStatusBar.Text = isEn ? $"Failed to add '{contactName}' to group. Ensure contact exists." : $"Không thể thêm '{contactName}' vào nhóm. Hãy chắc chắn liên hệ đã tồn tại trong danh bạ.";
-            }
+        }
+        catch (Exception ex)
+        {
+            TxtStatusBar.Text = $"Lỗi: {ex.Message}";
         }
     }
 
@@ -601,27 +615,34 @@ public partial class MainWindow : Window
 
     private void BtnAddContact_Click(object sender, RoutedEventArgs e)
     {
-        string name = TxtNewContactName.Text.Trim();
-        string pubkey = TxtNewContactPubKey.Text.Trim();
-        bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
+        try
+        {
+            string name = TxtNewContactName.Text.Trim();
+            string pubkey = TxtNewContactPubKey.Text.Trim();
+            bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
 
-        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(pubkey))
-        {
-            TxtStatusBar.Text = isEn ? "Please enter both Contact Nickname and 64-char Hex Public Key." : "Vui lòng nhập cả Tên gợi nhớ và Khóa công khai Hex 64 ký tự.";
-            return;
-        }
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(pubkey))
+            {
+                TxtStatusBar.Text = isEn ? "Please enter both Contact Nickname and 64-char Hex Public Key." : "Vui lòng nhập cả Tên gợi nhớ và Khóa công khai Hex 64 ký tự.";
+                return;
+            }
 
-        bool ok = _node.AddContact(name, pubkey);
-        if (ok)
-        {
-            TxtNewContactName.Text = "";
-            TxtNewContactPubKey.Text = "";
-            RefreshContacts();
-            TxtStatusBar.Text = isEn ? $"Contact '{name}' added successfully." : $"Đã thêm liên hệ '{name}' thành công.";
+            bool ok = _node.AddContact(name, pubkey);
+            if (ok)
+            {
+                TxtNewContactName.Text = "";
+                TxtNewContactPubKey.Text = "";
+                RefreshContacts();
+                TxtStatusBar.Text = isEn ? $"Contact '{name}' added successfully." : $"Đã thêm liên hệ '{name}' thành công.";
+            }
+            else
+            {
+                TxtStatusBar.Text = isEn ? "Invalid Public Key hex format (must be 64 valid hex characters)." : "Định dạng khóa hex không hợp lệ (phải đúng 64 ký tự hex).";
+            }
         }
-        else
+        catch (Exception ex)
         {
-            TxtStatusBar.Text = isEn ? "Invalid Public Key hex format (must be 64 valid hex characters)." : "Định dạng khóa hex không hợp lệ (phải đúng 64 ký tự hex).";
+            TxtStatusBar.Text = $"Lỗi: {ex.Message}";
         }
     }
 
@@ -662,30 +683,37 @@ public partial class MainWindow : Window
 
     private void BtnSendFileAction_Click(object sender, RoutedEventArgs e)
     {
-        bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
-        if (CmbFileContact.SelectedItem is not ContactDto contact)
+        try
         {
-            TxtStatusBar.Text = isEn ? "Please select a recipient contact." : "Vui lòng chọn người nhận trong danh bạ.";
-            return;
-        }
+            bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
+            if (CmbFileContact.SelectedItem is not ContactDto contact)
+            {
+                TxtStatusBar.Text = isEn ? "Please select a recipient contact." : "Vui lòng chọn người nhận trong danh bạ.";
+                return;
+            }
 
-        string path = TxtFilePath.Text.Trim();
-        if (!File.Exists(path))
-        {
-            TxtStatusBar.Text = isEn ? "Selected file does not exist on disk." : "Tệp được chọn không tồn tại trên ổ đĩa.";
-            return;
-        }
+            string path = TxtFilePath.Text.Trim();
+            if (!File.Exists(path))
+            {
+                TxtStatusBar.Text = isEn ? "Selected file does not exist on disk." : "Tệp được chọn không tồn tại trên ổ đĩa.";
+                return;
+            }
 
-        bool ok = _node.SendFile(contact.Name, path);
-        if (ok)
-        {
-            TxtStatusBar.Text = isEn ? $"Encrypted transfer initiated for '{Path.GetFileName(path)}'." : $"Đã khởi tạo truyền tệp mã hóa '{Path.GetFileName(path)}'.";
-            TxtFilePath.Text = "";
-            RefreshFileTransfers();
+            bool ok = _node.SendFile(contact.Name, path);
+            if (ok)
+            {
+                TxtStatusBar.Text = isEn ? $"Encrypted transfer initiated for '{Path.GetFileName(path)}'." : $"Đã khởi tạo truyền tệp mã hóa '{Path.GetFileName(path)}'.";
+                TxtFilePath.Text = "";
+                RefreshFileTransfers();
+            }
+            else
+            {
+                TxtStatusBar.Text = isEn ? "Failed to start file transfer. Verify connection status." : "Không thể bắt đầu truyền tệp. Vui lòng kiểm tra kết nối mạng.";
+            }
         }
-        else
+        catch (Exception ex)
         {
-            TxtStatusBar.Text = isEn ? "Failed to start file transfer. Verify connection status." : "Không thể bắt đầu truyền tệp. Vui lòng kiểm tra kết nối mạng.";
+            TxtStatusBar.Text = $"Lỗi: {ex.Message}";
         }
     }
 
@@ -697,28 +725,42 @@ public partial class MainWindow : Window
 
     private void BtnOpenDownloads_Click(object sender, RoutedEventArgs e)
     {
-        string downloadsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "p2p_data_win", "downloads");
-        Directory.CreateDirectory(downloadsDir);
-        WindowsNative.OpenInExplorer(downloadsDir);
+        try
+        {
+            string downloadsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "p2p_data_win", "downloads");
+            Directory.CreateDirectory(downloadsDir);
+            WindowsNative.OpenInExplorer(downloadsDir);
+        }
+        catch (Exception ex)
+        {
+            TxtStatusBar.Text = $"Lỗi: {ex.Message}";
+        }
     }
 
     // --- Network & Relay Dashboard ---
 
     private void BtnConnectPeer_Click(object sender, RoutedEventArgs e)
     {
-        string addr = TxtConnectPeerAddr.Text.Trim();
-        if (string.IsNullOrEmpty(addr)) return;
+        try
+        {
+            string addr = TxtConnectPeerAddr.Text.Trim();
+            if (string.IsNullOrEmpty(addr)) return;
 
-        bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
-        bool ok = _node.ConnectPeer(addr);
-        if (ok)
-        {
-            TxtStatusBar.Text = isEn ? $"TCP Handshake initiated to {addr}." : $"Đã bắt đầu bắt tay TCP tới {addr}.";
-            RefreshNetworkStats();
+            bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
+            bool ok = _node.ConnectPeer(addr);
+            if (ok)
+            {
+                TxtStatusBar.Text = isEn ? $"TCP Handshake initiated to {addr}." : $"Đã bắt đầu bắt tay TCP tới {addr}.";
+                RefreshNetworkStats();
+            }
+            else
+            {
+                TxtStatusBar.Text = isEn ? $"Failed to connect to {addr}. Check remote node status." : $"Kết nối thất bại tới {addr}. Vui lòng kiểm tra node từ xa.";
+            }
         }
-        else
+        catch (Exception ex)
         {
-            TxtStatusBar.Text = isEn ? $"Failed to connect to {addr}. Check remote node status." : $"Kết nối thất bại tới {addr}. Vui lòng kiểm tra node từ xa.";
+            TxtStatusBar.Text = $"Lỗi: {ex.Message}";
         }
     }
 
@@ -736,23 +778,71 @@ public partial class MainWindow : Window
             : $"{stats.ConnectedPeers.Count} node đang kết nối";
     }
 
+    public void ShowErrorMessage(string message)
+    {
+        if (TxtStatusBar != null)
+        {
+            TxtStatusBar.Text = message;
+        }
+    }
+
+    private bool SafeSetClipboardText(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+        for (int i = 0; i < 10; i++)
+        {
+            try
+            {
+                Clipboard.SetDataObject(text, true);
+                return true;
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                System.Threading.Thread.Sleep(50);
+            }
+            catch
+            {
+                break;
+            }
+        }
+        return false;
+    }
+
     private void BtnCopyMyId_Click(object sender, RoutedEventArgs e)
     {
-        if (!string.IsNullOrEmpty(_node.PeerId))
+        try
         {
-            Clipboard.SetText(_node.PeerId);
-            bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
-            TxtStatusBar.Text = isEn ? "Peer ID copied to clipboard!" : "Đã sao chép Peer ID vào khay nhớ tạm!";
+            if (!string.IsNullOrEmpty(_node.PeerId))
+            {
+                bool copied = SafeSetClipboardText(_node.PeerId);
+                bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
+                TxtStatusBar.Text = copied
+                    ? (isEn ? "Peer ID copied to clipboard!" : "Đã sao chép Peer ID vào khay nhớ tạm!")
+                    : (isEn ? "Could not access clipboard." : "Không thể truy cập khay nhớ tạm (đang bận).");
+            }
+        }
+        catch (Exception ex)
+        {
+            TxtStatusBar.Text = $"Lỗi: {ex.Message}";
         }
     }
 
     private void BtnCopyPubKey_Click(object sender, RoutedEventArgs e)
     {
-        if (!string.IsNullOrEmpty(_node.PublicKey))
+        try
         {
-            Clipboard.SetText(_node.PublicKey);
-            bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
-            TxtStatusBar.Text = isEn ? "Public Key copied to clipboard!" : "Đã sao chép Khóa công khai vào khay nhớ tạm!";
+            if (!string.IsNullOrEmpty(_node.PublicKey))
+            {
+                bool copied = SafeSetClipboardText(_node.PublicKey);
+                bool isEn = LanguageService.Instance.CurrentLanguage == AppLanguage.English;
+                TxtStatusBar.Text = copied
+                    ? (isEn ? "Public Key copied to clipboard!" : "Đã sao chép Khóa công khai vào khay nhớ tạm!")
+                    : (isEn ? "Could not access clipboard." : "Không thể truy cập khay nhớ tạm (đang bận).");
+            }
+        }
+        catch (Exception ex)
+        {
+            TxtStatusBar.Text = $"Lỗi: {ex.Message}";
         }
     }
 }
