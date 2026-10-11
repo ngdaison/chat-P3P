@@ -15,6 +15,17 @@ public partial class PromptDialog : Window
         TxtInput.Text = defaultValue;
         TxtInput.SelectAll();
         TxtInput.Focus();
+
+        if (LanguageService.Instance.CurrentLanguage == AppLanguage.English)
+        {
+            BtnCancel.Content = "Cancel";
+            BtnOk.Content = "OK";
+        }
+        else
+        {
+            BtnCancel.Content = "Hủy bỏ";
+            BtnOk.Content = "Xác nhận";
+        }
     }
 
     protected override void OnSourceInitialized(EventArgs e)

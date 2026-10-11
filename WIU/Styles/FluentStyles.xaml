@@ -44,29 +44,34 @@
         <GradientStop Color="#0063B1" Offset="1" />
     </LinearGradientBrush>
 
-    <!-- Custom Title Bar Caption Buttons -->
+    <!-- Windows 11 Native Pixel-Perfect Caption Button Base -->
     <Style x:Key="CaptionButton" TargetType="Button">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="#CCCCCC" />
-        <Setter Property="FontSize" Value="10" />
-        <Setter Property="FontFamily" Value="Segoe UI" />
         <Setter Property="Width" Value="46" />
-        <Setter Property="Height" Value="38" />
+        <Setter Property="Height" Value="42" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="UseLayoutRounding" Value="True" />
+        <Setter Property="Cursor" Value="Arrow" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" Background="{TemplateBinding Background}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="#22FFFFFF" />
-                            <Setter Property="Foreground" Value="White" />
+                            <Setter TargetName="btnBorder" Property="Background" Value="#1AFFFFFF" />
+                            <Setter Property="Foreground" Value="#FFFFFF" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="#33FFFFFF" />
+                            <Setter TargetName="btnBorder" Property="Background" Value="#26FFFFFF" />
+                            <Setter Property="Foreground" Value="#FFFFFF" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -74,20 +79,22 @@
         </Setter>
     </Style>
 
+    <!-- Windows 11 Native Close Button -->
     <Style x:Key="CaptionCloseButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" Background="{TemplateBinding Background}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="#E81123" />
-                            <Setter Property="Foreground" Value="White" />
+                            <Setter TargetName="btnBorder" Property="Background" Value="#C42B1C" />
+                            <Setter Property="Foreground" Value="#FFFFFF" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="#C4101F" />
+                            <Setter TargetName="btnBorder" Property="Background" Value="#B82216" />
+                            <Setter Property="Foreground" Value="#FFFFFF" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

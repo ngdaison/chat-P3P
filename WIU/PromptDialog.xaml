@@ -1,19 +1,19 @@
 <Window x:Class="P2PChatApp.PromptDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Input" Height="190" Width="420"
+        Title="Nhập dữ liệu" Height="190" Width="430"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="{StaticResource WindowBackgroundBrush}">
+        Background="{StaticResource WindowBgBrush}">
     <Border Padding="20">
         <StackPanel VerticalAlignment="Center">
-            <TextBlock x:Name="TxtPromptMessage" Text="Please enter value:"
+            <TextBlock x:Name="TxtPromptMessage" Text="Vui lòng nhập giá trị:"
                        FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12" />
             <TextBox x:Name="TxtInput" Style="{StaticResource FluentTextBox}" Margin="0,0,0,16" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Cancel" Style="{StaticResource FluentSecondaryButton}"
+                <Button x:Name="BtnCancel" Content="Hủy bỏ" Style="{StaticResource FluentSecondaryButton}"
                         IsCancel="True" Click="BtnCancel_Click" Margin="0,0,8,0" />
-                <Button Content="OK" Style="{StaticResource FluentPrimaryButton}"
+                <Button x:Name="BtnOk" Content="Xác nhận" Style="{StaticResource FluentPrimaryButton}"
                         IsDefault="True" Click="BtnOk_Click" />
             </StackPanel>
         </StackPanel>
